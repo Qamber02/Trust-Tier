@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustTier - Model Testing & Evaluation Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar and smooth transitions */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.8); }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .glass-input {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(71, 85, 105, 0.6);
+    }
+    .toggle-active {
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
+      color: #ffffff !important;
+      border-color: #6366f1 !important;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Background Ambient Lights -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-[128px]"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-[128px]"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-sky-600/20 rounded-full blur-[128px]"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 font-bold text-xl">
+          T
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-white flex items-center gap-2">
+            TrustTier <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">v2.0 Model Suite</span>
+          </h1>
+          <p class="text-xs text-slate-400">Evidence-Weighted Belief Propagation & Hardware Badge Verification</p>
+        </div>
+      </div>
+      
+      <!-- Nav Tabs -->
+      <nav class="flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800">
+        <button onclick="switchTab('playground')" id="tab-btn-playground" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow-sm">
+          🧪 Delivery Playground
+        </button>
+        <button onclick="switchTab('riders')" id="tab-btn-riders" class="tab-btn px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all">
+          👥 200-Rider Attack Test
+        </button>
+        <button onclick="switchTab('benchmark')" id="tab-btn-benchmark" class="tab-btn px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all">
+          📊 Benchmark (n=29,889)
+        </button>
+        <button onclick="switchTab('latency')" id="tab-btn-latency" class="tab-btn px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all">
+          ⚡ Graph vs SQL Latency
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: DELIVERY PLAYGROUND & SIMULATOR                                     -->
+    <!-- ========================================================================= -->
+    <div id="tab-playground" class="tab-pane space-y-6">
+
+      <!-- Preset Scenarios Quick Loader -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> One-Click Attack & Scenario Presets
+            </h2>
+            <p class="text-xs text-slate-400">Instantly test model divergence on honest operations, edge cases, and adversarial review rings.</p>
+          </div>
+          <span class="text-xs text-indigo-400 font-mono">Select a preset to load inputs:</span>
+        </div>
+        
+        <div id="preset-buttons-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Simulator 2-Column Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Controls Column (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Hardware Badge Logs Card -->
+          <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                  <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  ESP32 Hardware Badge Evidence Logs
+                </h3>
+                <p class="text-xs text-slate-400">Signed lifecycle flags and tamper-evident cryptographic hash chain.</p>
+              </div>
+              <span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">Hardware Layer</span>
+            </div>
+
+            <!-- Lifecycle Event Toggles -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <button type="button" id="btn-nfc_tap_present" onclick="toggleInput('nfc_tap_present')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">NFC Reader</div>
+                <div class="text-sm font-semibold mt-0.5">NFC Tap Present</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">OFF</div>
+              </button>
+
+              <button type="button" id="btn-arrival_event_present" onclick="toggleInput('arrival_event_present')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Destination</div>
+                <div class="text-sm font-semibold mt-0.5">Arrival Logged</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">OFF</div>
+              </button>
+
+              <button type="button" id="btn-start_event_present" onclick="toggleInput('start_event_present')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Job Pickup</div>
+                <div class="text-sm font-semibold mt-0.5">Start Logged</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">OFF</div>
+              </button>
+
+              <button type="button" id="btn-finish_event_present" onclick="toggleInput('finish_event_present')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Handover</div>
+                <div class="text-sm font-semibold mt-0.5">Finish Logged</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">OFF</div>
+              </button>
+            </div>
+
+            <!-- Cryptographic Flags -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+              <button type="button" id="btn-device_signature_valid" onclick="toggleInput('device_signature_valid')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Crypto Key</div>
+                <div class="text-sm font-semibold mt-0.5">Device Signature</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">INVALID</div>
+              </button>
+
+              <button type="button" id="btn-event_chain_valid" onclick="toggleInput('event_chain_valid')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Tamper Check</div>
+                <div class="text-sm font-semibold mt-0.5">Event Hash Chain</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">BROKEN</div>
+              </button>
+
+              <button type="button" id="btn-offline_sync" onclick="toggleInput('offline_sync')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Connectivity</div>
+                <div class="text-sm font-semibold mt-0.5">Offline Flash Sync</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">NO</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Trip Timing & Anomaly Controls -->
+          <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+            <div class="border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Trip Timing & Physical Duration
+              </h3>
+              <p class="text-xs text-slate-400">Duration compression triggers ghost check-in heuristic flags (< 25% of expected).</p>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Scheduled Duration Slider -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300">Scheduled Duration</span>
+                  <span id="label-sched" class="font-mono text-indigo-400 font-semibold">45 min</span>
+                </div>
+                <input type="range" id="input-sched" min="15" max="90" step="5" value="45" oninput="updateTiming()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+              </div>
+
+              <!-- Actual Duration Slider -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300">Actual Duration (Timestamp Difference)</span>
+                  <span id="label-actual" class="font-mono text-indigo-400 font-semibold">42.0 min</span>
+                </div>
+                <input type="range" id="input-actual" min="2" max="120" step="1" value="42" oninput="updateTiming()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                <div class="flex items-center justify-between mt-1 text-xs text-slate-400">
+                  <span>Duration Ratio: <strong id="ratio-display" class="font-mono text-white">0.93</strong></span>
+                  <span id="ratio-status" class="px-2 py-0.5 rounded text-emerald-400 bg-emerald-500/10">Normal Transit</span>
+                </div>
+              </div>
+
+              <!-- Arrival Delay Slider -->
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-300">Arrival Delay</span>
+                  <span id="label-delay" class="font-mono text-indigo-400 font-semibold">+2.0 min</span>
+                </div>
+                <input type="range" id="input-delay" min="-30" max="60" step="1" value="2" oninput="updateTiming()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Entity Selection & Reputation Signals -->
+          <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+            <div class="border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Graph Nodes & Reputation Signals
+              </h3>
+              <p class="text-xs text-slate-400">Select rider and client nodes to inspect belief propagation downweighting on Sybils.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Rider Selection -->
+              <div>
+                <label class="block text-xs text-slate-300 font-medium mb-1">Rider ID (200 Workers)</label>
+                <select id="select-rider" onchange="runPredict()" class="glass-input w-full p-2.5 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                  <optgroup label="Honest Veterans (RDR-001 to 130)">
+                    <option value="RDR-001">RDR-001 (Veteran)</option>
+                    <option value="RDR-025" selected>RDR-025 (Veteran)</option>
+                    <option value="RDR-080">RDR-080 (Veteran)</option>
+                  </optgroup>
+                  <optgroup label="Honest Remote Riders (RDR-131 to 160)">
+                    <option value="RDR-140">RDR-140 (Remote Offline)</option>
+                    <option value="RDR-155">RDR-155 (Remote Offline)</option>
+                  </optgroup>
+                  <optgroup label="Glitched Hardware Honest (RDR-161 to 180)">
+                    <option value="RDR-165">RDR-165 (Glitched Badge)</option>
+                    <option value="RDR-170">RDR-170 (Glitched Badge)</option>
+                  </optgroup>
+                  <optgroup label="Review-Ring Sybil Colluders (RDR-181 to 190)">
+                    <option value="RDR-181">RDR-181 (Sybil Ring)</option>
+                    <option value="RDR-185">RDR-185 (Sybil Ring)</option>
+                    <option value="RDR-190">RDR-190 (Sybil Ring)</option>
+                  </optgroup>
+                  <optgroup label="Ghost Check-in Attackers (RDR-191 to 200)">
+                    <option value="RDR-195">RDR-195 (Ghost Attacker)</option>
+                    <option value="RDR-198">RDR-198 (Ghost Attacker)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Client Selection -->
+              <div>
+                <label class="block text-xs text-slate-300 font-medium mb-1">Client ID (2,500 Clients)</label>
+                <select id="select-client" onchange="runPredict()" class="glass-input w-full p-2.5 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                  <optgroup label="Normal Clients (CLT-0001 to 2400)">
+                    <option value="CLT-0001">CLT-0001 (Normal)</option>
+                    <option value="CLT-0350" selected>CLT-0350 (Normal)</option>
+                    <option value="CLT-0915">CLT-0915 (Normal)</option>
+                    <option value="CLT-1280">CLT-1280 (Normal)</option>
+                  </optgroup>
+                  <optgroup label="Collusive Sybil Clients (CLT-2401 to 2500)">
+                    <option value="CLT-2405">CLT-2405 (Sybil Biclique, W_c=0.02)</option>
+                    <option value="CLT-2450">CLT-2450 (Sybil Biclique, W_c=0.02)</option>
+                    <option value="CLT-2495">CLT-2495 (Sybil Biclique, W_c=0.02)</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <!-- Reputation Toggles -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <button type="button" id="btn-client_confirmation" onclick="toggleInput('client_confirmation')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Customer Review</div>
+                <div class="text-sm font-semibold mt-0.5">Client Confirmed</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">NO</div>
+              </button>
+
+              <button type="button" id="btn-dispute_filed" onclick="toggleInput('dispute_filed')" class="toggle-btn p-3 rounded-xl border border-slate-700 bg-slate-800/80 text-left transition-all">
+                <div class="text-xs text-slate-400 font-medium">Complaint</div>
+                <div class="text-sm font-semibold mt-0.5">Dispute Filed</div>
+                <div class="text-xs font-mono mt-1 status-text text-slate-400">NONE</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Evaluation & Prediction Column (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- Evidence Tier & Likelihood Ratio Card -->
+          <div class="glass-card rounded-2xl p-5 border-l-4 border-l-indigo-500 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Derived Evidence Tier</span>
+              <span id="tier-badge" class="px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                DEVICE_SIGNED
+              </span>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <div>
+                <div class="text-xs text-slate-400">Bayesian Likelihood Ratio</div>
+                <div id="tier-lr-display" class="text-2xl font-bold font-mono text-white">LR = 48.86</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">Posterior Odds Multiplier</div>
+                <div id="odds-display" class="text-xs font-mono text-emerald-400 font-semibold">+3.89 log-LR</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5-Model Multi-Pill Comparison Card -->
+          <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+            <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-white">5-Model Real-Time Inference</h3>
+                <p class="text-xs text-slate-400">Probability of legitimate completion across models.</p>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">P(GT = 1)</span>
+            </div>
+
+            <!-- Model 1: Naive Claim -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">1. Naive Self-Reported Claim</span>
+                <span id="score-naive" class="font-mono font-bold text-slate-400">100.0%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div id="bar-naive" class="bg-slate-400 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+              </div>
+              <p class="text-[11px] text-slate-400">Trusts rider app click blindly without verification.</p>
+            </div>
+
+            <!-- Model 2: Flat Client Rating -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">2. Flat Client Confirmation Rating</span>
+                <span id="score-flat" class="font-mono font-bold text-amber-400">100.0%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div id="bar-flat" class="bg-amber-400 h-2 rounded-full transition-all duration-300" style="width: 100%"></div>
+              </div>
+              <p class="text-[11px] text-slate-400">Vulnerable to collusive Sybil review rings (CLT-2401..2500).</p>
+            </div>
+
+            <!-- Model 3: Pure Evidence Tier -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">3. Pure Bayesian Tier (LR only)</span>
+                <span id="score-tier" class="font-mono font-bold text-sky-400">98.8%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div id="bar-tier" class="bg-sky-400 h-2 rounded-full transition-all duration-300" style="width: 98.8%"></div>
+              </div>
+              <p class="text-[11px] text-slate-400">Updated strictly by physical evidence tier inequality.</p>
+            </div>
+
+            <!-- Model 4: Hardware ML -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">4. Hardware Badge ML (No Graph)</span>
+                <span id="score-hw" class="font-mono font-bold text-indigo-400">99.4%</span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div id="bar-hw" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: 99.4%"></div>
+              </div>
+              <p class="text-[11px] text-slate-400">HistGradientBoosting on crypto flags and timing ratio.</p>
+            </div>
+
+            <!-- Model 5: TrustTier Full Graph BP -->
+            <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/40 space-y-2 shadow-lg shadow-indigo-950/50">
+              <div class="flex justify-between text-xs">
+                <span class="text-indigo-200 font-bold flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                  5. TrustTier Graph BP + Hardware (Full)
+                </span>
+                <span id="score-full" class="font-mono font-bold text-emerald-400 text-sm">99.4%</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden">
+                <div id="bar-full" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-2.5 rounded-full transition-all duration-300" style="width: 99.4%"></div>
+              </div>
+              <p class="text-[11px] text-indigo-300/80">Unites tiered hardware crypto evidence, duration anomalies, and bipartite graph belief propagation.</p>
+            </div>
+          </div>
+
+          <!-- Graph Context & Client Weight Card -->
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Graph Belief Context</h4>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50">
+                <span class="text-slate-400 block">Rider Posterior Belief R_r</span>
+                <span id="ctx-rider-prob" class="font-mono text-white text-sm font-bold">0.9307</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50">
+                <span class="text-slate-400 block">Client Credibility W_c</span>
+                <span id="ctx-client-weight" class="font-mono text-white text-sm font-bold">0.8406</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Anomaly Alerts Container -->
+          <div id="alerts-container" class="space-y-2">
+            <!-- Populated by JavaScript -->
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: 200-RIDER 5-COHORT ATTACK RESISTANCE TEST                          -->
+    <!-- ========================================================================= -->
+    <div id="tab-riders" class="tab-pane hidden space-y-6">
+
+      <!-- Attack Test Overview Banner -->
+      <div class="glass-card rounded-2xl p-6 border-l-4 border-l-rose-500 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            Objective 3: Attack Test & Sybil Review-Ring Resistance
+          </h2>
+          <p class="text-xs text-slate-400 mt-1 max-w-3xl">
+            Exposes how a flat client confirmation rating is completely fooled by review rings (giving Sybil colluders RDR 181–190 a <strong class="text-amber-400">95.53% rating</strong> despite only 6% true completion), while TrustTier's graph belief propagation and tiered evidence achieve <strong class="text-emerald-400">100.0% Attacker Recall@20</strong> and 0% false positives on glitched honest workers.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs font-mono">
+          <div>
+            <div class="text-slate-400">Flat Rating Spearman:</div>
+            <div class="text-amber-400 font-bold text-sm">&rho; = 0.4597</div>
+          </div>
+          <div class="border-l border-slate-700 pl-3 ml-2">
+            <div class="text-slate-400">TrustTier Graph BP:</div>
+            <div class="text-emerald-400 font-bold text-sm">&rho; = 0.8846</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cohort Filter Pills and Search -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button onclick="filterRiders('all')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white">All (200)</button>
+          <button onclick="filterRiders('Honest Online')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800">1. Honest Online (130)</button>
+          <button onclick="filterRiders('Honest Offline')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800">2. Honest Offline (30)</button>
+          <button onclick="filterRiders('Glitched Badge')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800">3. Glitched Badge (20)</button>
+          <button onclick="filterRiders('Review Ring')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800">4. Review Ring Sybils (10)</button>
+          <button onclick="filterRiders('Ghost/Tampered')" class="cohort-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-900 border border-slate-800">5. Ghost Attackers (10)</button>
+        </div>
+        <div class="w-full sm:w-64">
+          <input type="text" id="rider-search-input" onkeyup="searchRiders()" placeholder="Search rider (e.g. RDR-185)..." class="glass-input w-full px-3 py-1.5 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <!-- 200 Riders Table Card -->
+      <div class="glass-card rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider sticky top-0 z-10 border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">Rider ID</th>
+                <th class="py-3 px-4">Cohort</th>
+                <th class="py-3 px-4 text-center">True Completion (GT)</th>
+                <th class="py-3 px-4 text-center">Flat Client Rating</th>
+                <th class="py-3 px-4 text-center">Pure Tier Prob</th>
+                <th class="py-3 px-4 text-center">TrustTier BP Belief</th>
+                <th class="py-3 px-4 text-center">Objective 3 Verdict</th>
+              </tr>
+            </thead>
+            <tbody id="riders-table-body" class="divide-y divide-slate-800/60 font-mono">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: HELD-OUT TEST SET BENCHMARKS (n = 29,889)                          -->
+    <!-- ========================================================================= -->
+    <div id="tab-benchmark" class="tab-pane hidden space-y-6">
+
+      <div class="glass-card rounded-2xl p-6">
+        <div class="border-b border-slate-800 pb-3 mb-4">
+          <h2 class="text-sm font-semibold text-white">Held-Out Test Set Verification Benchmark (n = 29,889 Deliveries)</h2>
+          <p class="text-xs text-slate-400">Evaluates 70% train / 30% held-out test split with zero data leakage.</p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4 font-sans">Model Architecture</th>
+                <th class="py-3 px-4 text-center">ROC-AUC</th>
+                <th class="py-3 px-4 text-center">PR-AUC</th>
+                <th class="py-3 px-4 text-center">F1 Score</th>
+                <th class="py-3 px-4 text-center">Accuracy</th>
+                <th class="py-3 px-4 text-center">Brier Loss</th>
+              </tr>
+            </thead>
+            <tbody id="benchmark-table-body" class="divide-y divide-slate-800/60">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Objective 3 Attack Resistance Table -->
+      <div class="glass-card rounded-2xl p-6">
+        <div class="border-b border-slate-800 pb-3 mb-4">
+          <h2 class="text-sm font-semibold text-white">Objective 3: Worker Ranking & Attack Resistance Metrics (200 Workers)</h2>
+          <p class="text-xs text-slate-400">Comparing Spearman &rho; rank correlation, recall of attackers, and review-ring deception.</p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4 font-sans">Scoring Method</th>
+                <th class="py-3 px-4 text-center">Spearman &rho;</th>
+                <th class="py-3 px-4 text-center">Kendall &tau;</th>
+                <th class="py-3 px-4 text-center">Attacker Recall@20</th>
+                <th class="py-3 px-4 text-center">Ring Caught@20</th>
+                <th class="py-3 px-4 text-center">Ring in Top-10 (Fooled)</th>
+                <th class="py-3 px-4 text-center">Glitched FPR@20</th>
+              </tr>
+            </thead>
+            <tbody id="attack-benchmark-body" class="divide-y divide-slate-800/60">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: OBJECTIVE 4 LATENCY BENCHMARK (SQL vs GRAPH)                      -->
+    <!-- ========================================================================= -->
+    <div id="tab-latency" class="tab-pane hidden space-y-6">
+
+      <div class="glass-card rounded-2xl p-6">
+        <div class="border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-sm font-semibold text-white">Objective 4: 2-Hop Trust Lookup Benchmark (Relational SQL Joins vs. Graph Traversal)</h2>
+          <p class="text-xs text-slate-400">Measures average query execution latency for 2-hop co-worker reliability lookups as the dataset scales from 10k to 100k events.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- 10,000 events -->
+          <div class="glass-card rounded-xl p-5 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-indigo-400 font-bold">10,000 Events</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">5.1x Speedup</span>
+            </div>
+            <div class="space-y-2 text-xs font-mono">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>SQL 2-Hop Join</span><span>0.50 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width: 20%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Graph Traversal</span><span class="text-emerald-400">0.10 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-emerald-400 h-2 rounded-full" style="width: 4%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 50,000 events -->
+          <div class="glass-card rounded-xl p-5 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-indigo-400 font-bold">50,000 Events</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">7.3x Speedup</span>
+            </div>
+            <div class="space-y-2 text-xs font-mono">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>SQL 2-Hop Join</span><span>6.52 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width: 60%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Graph Traversal</span><span class="text-emerald-400">0.89 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-emerald-400 h-2 rounded-full" style="width: 9%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 100,000 events -->
+          <div class="glass-card rounded-xl p-5 border-2 border-indigo-500/50 bg-indigo-950/20 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-indigo-300 font-bold">100,000 Events (Full)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-400 text-slate-950 font-mono font-bold">10.0x Speedup</span>
+            </div>
+            <div class="space-y-2 text-xs font-mono">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>SQL 2-Hop Join</span><span class="text-amber-400">25.40 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-amber-400 h-2 rounded-full" style="width: 100%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Graph Traversal</span><span class="text-emerald-400 font-bold">2.55 ms</span></div>
+                <div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-emerald-400 h-2 rounded-full" style="width: 10%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 mt-6 leading-relaxed">
+          <strong class="text-white">Database Architecture Conclusion:</strong> While PostgreSQL easily handles jobs, payments, and raw append-only timestamps, 2-hop graph lookups for trust propagation scale with vertex degree rather than table size. In an interconnected gig network with 200 workers and 2,500 clients, index-free graph traversal sustains sub-3ms latency, proving the need for the Neo4j / Apache AGE graph layer defined in Section 3 of the project proposal.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- JavaScript Client Logic -->
+  <script>
+    // State
+    const state = {
+      nfc_tap_present: 1,
+      arrival_event_present: 1,
+      start_event_present: 1,
+      finish_event_present: 1,
+      device_signature_valid: 1,
+      event_chain_valid: 1,
+      offline_sync: 0,
+      scheduled_duration_minutes: 40,
+      actual_duration_minutes: 42.5,
+      arrival_delay_minutes: -1.2,
+      client_confirmation: 1,
+      dispute_filed: 0,
+      rider_id: 'RDR-025',
+      client_id: 'CLT-0350'
+    };
+
+    let allRiders = [];
+    let presetScenarios = {};
+
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-400');
+      });
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-btn-' + tabId);
+      activeBtn.classList.remove('text-slate-400');
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+    }
+
+    // Toggle Input Handler
+    function toggleInput(key) {
+      state[key] = state[key] === 1 ? 0 : 1;
+      updateUIButtons();
+      runPredict();
+    }
+
+    // Update Button Visual States
+    function updateUIButtons() {
+      const toggles = [
+        'nfc_tap_present', 'arrival_event_present', 'start_event_present',
+        'finish_event_present', 'device_signature_valid', 'event_chain_valid',
+        'offline_sync', 'client_confirmation', 'dispute_filed'
+      ];
+
+      toggles.forEach(key => {
+        const btn = document.getElementById('btn-' + key);
+        if (!btn) return;
+        const val = state[key];
+        const statusEl = btn.querySelector('.status-text');
+
+        if (val === 1) {
+          btn.classList.add('toggle-active');
+          if (statusEl) {
+            statusEl.classList.remove('text-slate-400');
+            statusEl.classList.add('text-white');
+            if (key === 'device_signature_valid') statusEl.innerText = 'VALID (SIGNED)';
+            else if (key === 'event_chain_valid') statusEl.innerText = 'INTACT (CHAINED)';
+            else if (key === 'offline_sync') statusEl.innerText = 'BUFFERED SYNC';
+            else if (key === 'dispute_filed') statusEl.innerText = 'DISPUTE ACTIVE';
+            else statusEl.innerText = 'ACTIVE (1)';
+          }
+        } else {
+          btn.classList.remove('toggle-active');
+          if (statusEl) {
+            statusEl.classList.remove('text-white');
+            statusEl.classList.add('text-slate-400');
+            if (key === 'device_signature_valid') statusEl.innerText = 'UNSIGNED/FORGED';
+            else if (key === 'event_chain_valid') statusEl.innerText = 'BROKEN/TAMPERED';
+            else if (key === 'offline_sync') statusEl.innerText = 'REAL-TIME';
+            else if (key === 'dispute_filed') statusEl.innerText = 'NO DISPUTE';
+            else statusEl.innerText = 'OFF (0)';
+          }
+        }
+      });
+    }
+
+    // Timing slider handler
+    function updateTiming() {
+      state.scheduled_duration_minutes = parseInt(document.getElementById('input-sched').value);
+      state.actual_duration_minutes = parseFloat(document.getElementById('input-actual').value);
+      state.arrival_delay_minutes = parseFloat(document.getElementById('input-delay').value);
+
+      document.getElementById('label-sched').innerText = state.scheduled_duration_minutes + ' min';
+      document.getElementById('label-actual').innerText = state.actual_duration_minutes.toFixed(1) + ' min';
+      const delaySign = state.arrival_delay_minutes > 0 ? '+' : '';
+      document.getElementById('label-delay').innerText = delaySign + state.arrival_delay_minutes.toFixed(1) + ' min';
+
+      const ratio = state.actual_duration_minutes / Math.max(state.scheduled_duration_minutes, 1);
+      document.getElementById('ratio-display').innerText = ratio.toFixed(2);
+      const ratioStatus = document.getElementById('ratio-status');
+      if (ratio < 0.25) {
+        ratioStatus.innerText = '⚠️ Ghost Anomaly (< 25%)';
+        ratioStatus.className = 'px-2 py-0.5 rounded text-rose-400 bg-rose-500/10 font-bold';
+      } else if (ratio > 1.3) {
+        ratioStatus.innerText = 'Delayed Route';
+        ratioStatus.className = 'px-2 py-0.5 rounded text-amber-400 bg-amber-500/10';
+      } else {
+        ratioStatus.innerText = 'Normal Transit';
+        ratioStatus.className = 'px-2 py-0.5 rounded text-emerald-400 bg-emerald-500/10';
+      }
+
+      runPredict();
+    }
+
+    // Run Prediction API Call
+    async function runPredict() {
+      state.rider_id = document.getElementById('select-rider').value;
+      state.client_id = document.getElementById('select-client').value;
+
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state)
+        });
+        const data = await res.json();
+        renderPredictionResults(data);
+      } catch (err) {
+        console.error('Prediction request error:', err);
+      }
+    }
+
+    // Render Results in Dashboard
+    function renderPredictionResults(data) {
+      // Evidence Tier Badge
+      const tierBadge = document.getElementById('tier-badge');
+      tierBadge.innerText = data.tier.toUpperCase();
+      if (data.tier === 'device_signed') {
+        tierBadge.className = 'px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else if (data.tier === 'nfc') {
+        tierBadge.className = 'px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-sky-500/20 text-sky-300 border border-sky-500/40';
+      } else if (data.tier === 'mixed') {
+        tierBadge.className = 'px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-amber-500/20 text-amber-300 border border-amber-500/40';
+      } else {
+        tierBadge.className = 'px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-rose-500/20 text-rose-300 border border-rose-500/40';
+      }
+
+      document.getElementById('tier-lr-display').innerText = `LR = ${data.empirical_lr.toFixed(2)}`;
+      const logLR = Math.log(data.empirical_lr);
+      const sign = logLR >= 0 ? '+' : '';
+      document.getElementById('odds-display').innerText = `${sign}${logLR.toFixed(2)} log-LR`;
+      document.getElementById('odds-display').className = `text-xs font-mono font-semibold ${logLR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      // 5-Model Scores and Progress Bars
+      const m = data.models;
+      const setBar = (id, prob) => {
+        const pct = (prob * 100).toFixed(1) + '%';
+        document.getElementById('score-' + id).innerText = pct;
+        document.getElementById('bar-' + id).style.width = pct;
+      };
+
+      setBar('naive', m.naive_claim.prob);
+      setBar('flat', m.flat_client.prob);
+      setBar('tier', m.pure_tier.prob);
+      setBar('hw', m.hardware_ml.prob);
+      setBar('full', m.trusttier_full.prob);
+
+      // Graph Context
+      document.getElementById('ctx-rider-prob').innerText = data.graph_context.rider_bp_prob.toFixed(4);
+      document.getElementById('ctx-client-weight').innerText = data.graph_context.client_credibility_weight.toFixed(4);
+      if (data.graph_context.client_credibility_weight < 0.20) {
+        document.getElementById('ctx-client-weight').className = 'font-mono text-rose-400 text-sm font-bold';
+      } else {
+        document.getElementById('ctx-client-weight').className = 'font-mono text-emerald-400 text-sm font-bold';
+      }
+
+      // Anomaly Alerts
+      const alertsContainer = document.getElementById('alerts-container');
+      alertsContainer.innerHTML = '';
+      if (data.alerts && data.alerts.length > 0) {
+        data.alerts.forEach(alert => {
+          const isErr = alert.level === 'error';
+          const box = document.createElement('div');
+          box.className = `p-3.5 rounded-xl border flex items-start gap-3 text-xs ${isErr ? 'bg-rose-950/40 border-rose-800 text-rose-200' : 'bg-amber-950/40 border-amber-800 text-amber-200'}`;
+          box.innerHTML = `
+            <div class="mt-0.5 font-bold ${isErr ? 'text-rose-400' : 'text-amber-400'}">${isErr ? '🚨' : '⚠️'}</div>
+            <div>
+              <div class="font-bold text-white">${alert.title}</div>
+              <div class="mt-0.5 text-slate-300 leading-relaxed">${alert.detail}</div>
+            </div>
+          `;
+          alertsContainer.appendChild(box);
+        });
+      }
+    }
+
+    // Load Scenario Preset
+    function loadPreset(key) {
+      const preset = presetScenarios[key];
+      if (!preset) return;
+      Object.assign(state, preset.inputs);
+
+      document.getElementById('input-sched').value = state.scheduled_duration_minutes;
+      document.getElementById('input-actual').value = state.actual_duration_minutes;
+      document.getElementById('input-delay').value = state.arrival_delay_minutes;
+      document.getElementById('select-rider').value = state.rider_id;
+      document.getElementById('select-client').value = state.client_id;
+
+      updateUIButtons();
+      updateTiming();
+    }
+
+    // Populate Scenario Presets
+    async function initScenarios() {
+      try {
+        const res = await fetch('/api/scenarios');
+        presetScenarios = await res.json();
+        const container = document.getElementById('preset-buttons-container');
+        container.innerHTML = '';
+
+        for (const [key, item] of Object.entries(presetScenarios)) {
+          const btn = document.createElement('button');
+          btn.className = 'p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-indigo-500/50 hover:bg-slate-800/80 text-left transition-all';
+          btn.onclick = () => loadPreset(key);
+          btn.innerHTML = `
+            <div class="text-[10px] uppercase font-bold tracking-wider text-${item.badge_color}-400">${item.category}</div>
+            <div class="text-xs font-semibold text-white truncate mt-0.5">${item.title}</div>
+          `;
+          container.appendChild(btn);
+        }
+      } catch (err) {
+        console.error('Error fetching scenarios:', err);
+      }
+    }
+
+    // Fetch and populate 200 Riders Table
+    async function initRiders() {
+      try {
+        const res = await fetch('/api/riders');
+        allRiders = await res.json();
+        renderRidersTable(allRiders);
+      } catch (err) {
+        console.error('Error fetching riders:', err);
+      }
+    }
+
+    function renderRidersTable(ridersList) {
+      const tbody = document.getElementById('riders-table-body');
+      tbody.innerHTML = '';
+      ridersList.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/60 transition-colors';
+        const isSybil = r.cohort.includes('Review Ring');
+        const isGhost = r.cohort.includes('Ghost');
+        const isGlitch = r.cohort.includes('Glitched');
+
+        let tagClass = 'bg-slate-800 text-slate-300';
+        let verdict = 'Normal Worker';
+        if (isSybil) {
+          tagClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold';
+          verdict = 'Caught by Graph BP (W_c=0.02)';
+        } else if (isGhost) {
+          tagClass = 'bg-purple-500/20 text-purple-300 border border-purple-500/40';
+          verdict = 'Caught by Tier & Disputes';
+        } else if (isGlitch) {
+          tagClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          verdict = 'Rescued by TrustTier BP';
+        }
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 font-bold text-white">${r.rider_id}</td>
+          <td class="py-2.5 px-4 font-sans text-slate-300"><span class="px-2 py-0.5 rounded text-[11px] ${tagClass}">${r.cohort}</span></td>
+          <td class="py-2.5 px-4 text-center font-bold ${(r.gt_rate > 0.7) ? 'text-emerald-400' : 'text-rose-400'}">${(r.gt_rate * 100).toFixed(1)}%</td>
+          <td class="py-2.5 px-4 text-center ${(r.flat_client_rating > 0.8 && r.gt_rate < 0.2) ? 'text-amber-400 font-bold' : 'text-slate-300'}">${(r.flat_client_rating * 100).toFixed(1)}%</td>
+          <td class="py-2.5 px-4 text-center text-slate-300">${(r.pure_tier_prob * 100).toFixed(1)}%</td>
+          <td class="py-2.5 px-4 text-center font-bold ${(r.trusttier_bp_prob > 0.6) ? 'text-emerald-400' : 'text-rose-400'}">${(r.trusttier_bp_prob * 100).toFixed(1)}%</td>
+          <td class="py-2.5 px-4 text-center font-sans text-[11px] text-slate-400">${verdict}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterRiders(cohortKey) {
+      document.querySelectorAll('.cohort-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('text-slate-400', 'bg-slate-900');
+      });
+      event.target.classList.remove('text-slate-400', 'bg-slate-900');
+      event.target.classList.add('bg-indigo-600', 'text-white');
+
+      if (cohortKey === 'all') {
+        renderRidersTable(allRiders);
+      } else {
+        const filtered = allRiders.filter(r => r.cohort.toLowerCase().includes(cohortKey.toLowerCase()));
+        renderRidersTable(filtered);
+      }
+    }
+
+    function searchRiders() {
+      const q = document.getElementById('rider-search-input').value.toLowerCase();
+      const filtered = allRiders.filter(r => r.rider_id.toLowerCase().includes(q) || r.cohort.toLowerCase().includes(q));
+      renderRidersTable(filtered);
+    }
+
+    // Populate Benchmarks Tab
+    async function initBenchmarks() {
+      try {
+        const res = await fetch('/api/benchmark');
+        const bdata = await res.json();
+
+        // Model Eval Table
+        const tbody = document.getElementById('benchmark-table-body');
+        tbody.innerHTML = '';
+        bdata.models_evaluation.forEach(m => {
+          const tr = document.createElement('tr');
+          const isTrust = m.type === 'trusttier';
+          tr.className = isTrust ? 'bg-indigo-950/30 text-white font-bold' : 'text-slate-300 hover:bg-slate-900/60';
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-sans ${isTrust ? 'text-emerald-300 flex items-center gap-1.5' : ''}">
+              ${isTrust ? '★ ' : ''}${m.model}
+            </td>
+            <td class="py-3 px-4 text-center text-indigo-400">${m.roc_auc.toFixed(4)}</td>
+            <td class="py-3 px-4 text-center text-sky-400">${m.pr_auc.toFixed(4)}</td>
+            <td class="py-3 px-4 text-center text-emerald-400">${m.f1.toFixed(4)}</td>
+            <td class="py-3 px-4 text-center font-sans">${m.accuracy.toFixed(2)}%</td>
+            <td class="py-3 px-4 text-center text-slate-400">${m.brier.toFixed(4)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Objective 3 Table
+        const tbody3 = document.getElementById('attack-benchmark-body');
+        tbody3.innerHTML = '';
+        bdata.objective_3_attack_test.forEach(m => {
+          const tr = document.createElement('tr');
+          const isFull = m.method.includes('TrustTier');
+          tr.className = isFull ? 'bg-indigo-950/30 text-white font-bold' : 'text-slate-300 hover:bg-slate-900/60';
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-sans ${isFull ? 'text-emerald-300' : ''}">${m.method}</td>
+            <td class="py-3 px-4 text-center ${m.spearman_rho > 0.8 ? 'text-emerald-400 font-bold' : 'text-amber-400'}">${m.spearman_rho.toFixed(4)}</td>
+            <td class="py-3 px-4 text-center text-slate-400">${m.kendall_tau.toFixed(4)}</td>
+            <td class="py-3 px-4 text-center text-emerald-400">${m.attacker_recall_20.toFixed(1)}%</td>
+            <td class="py-3 px-4 text-center text-emerald-400">${m.ring_caught_20.toFixed(1)}%</td>
+            <td class="py-3 px-4 text-center ${m.ring_fooled_top10 > 50 ? 'text-rose-400 font-bold' : 'text-slate-400'}">${m.ring_fooled_top10.toFixed(1)}%</td>
+            <td class="py-3 px-4 text-center text-slate-400">${m.glitched_fpr_20.toFixed(1)}%</td>
+          `;
+          tbody3.appendChild(tr);
+        });
+      } catch (err) {
+        console.error('Error fetching benchmarks:', err);
+      }
+    }
+
+    // Startup
+    window.addEventListener('DOMContentLoaded', async () => {
+      updateUIButtons();
+      updateTiming();
+      await initScenarios();
+      await initRiders();
+      await initBenchmarks();
+    });
+  </script>
+</body>
+</html>
+

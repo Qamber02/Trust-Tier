@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustTier - Easy Delivery Verification Tester</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .toggle-checkbox:checked {
+      right: 0;
+      border-color: #10B981;
+    }
+
+    .toggle-checkbox:checked+.toggle-label {
+      background-color: #10B981;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      height: 20px;
+      width: 20px;
+      border-radius: 9999px;
+      background: #6366f1;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Main Container -->
+  <div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- Top Header -->
+    <header
+      class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/20">
+            🛡️
+          </div>
+          <div>
+            <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              TrustTier Delivery Fraud Tester
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400">
+              Interactive test bench: easily toggle delivery evidence, select worker/buyer personas, and see instant
+              plain-English verdicts.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="http://127.0.0.1:8000/" target="_blank"
+          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 hover:border-slate-600 transition flex items-center gap-2 shadow-sm">
+          <span>📊 Full Analytics Dashboard</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Engine Status Bar -->
+    <div id="engine_status_bar"
+      class="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/40 text-xs shadow-lg transition-all duration-300">
+      <div class="flex items-center gap-2.5">
+        <span id="engine_dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="font-extrabold text-white uppercase tracking-wider text-[11px]">Inference Engine:</span>
+        <span id="engine_status_text" class="text-emerald-400 font-mono font-semibold">🟢 LIVE PYTHON MODEL
+          (trusttier_v2_models.joblib)</span>
+      </div>
+      <div class="flex items-center gap-3 text-slate-400 text-[11px] font-mono">
+        <span class="bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+          Model: <strong id="engine_type" class="text-white">HistGradientBoosting</strong> (<strong id="engine_trees"
+            class="text-indigo-400">107 Trees</strong>)
+        </span>
+        <span class="bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+          Latency: <strong id="engine_latency" class="text-emerald-400">1.8 ms</strong>
+        </span>
+      </div>
+    </div>
+
+    <!-- Quick Scenario Presets: One-Click Testing -->
+    <section class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+          <span>⚡</span> Quick Real-World Scenarios (Click to test instantly)
+        </span>
+        <span class="text-[11px] text-slate-500">Pick a scenario or manually customize below</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <!-- Preset 1 -->
+        <button onclick="applyPreset('honest')" id="btn_preset_honest"
+          class="preset-btn p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-400">1. Honest Delivery</span>
+            <span class="text-xs">🚴</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-tight">Worker completed trip on time, ESP32 badge signed, buyer
+            confirmed.</p>
+        </button>
+
+        <!-- Preset 2 -->
+        <button onclick="applyPreset('offline')" id="btn_preset_offline"
+          class="preset-btn p-3 rounded-xl bg-slate-800/80 hover:bg-sky-950/40 border border-sky-500/30 hover:border-sky-500 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-sky-400">2. Rural Dead Zone</span>
+            <span class="text-xs">📶</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-tight">No cellular in Gwadar outskirts. Badge safely stored data
+            and synced later.</p>
+        </button>
+
+        <!-- Preset 3 -->
+        <button onclick="applyPreset('glitched')" id="btn_preset_glitched"
+          class="preset-btn p-3 rounded-xl bg-slate-800/80 hover:bg-amber-950/40 border border-amber-500/30 hover:border-amber-500 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-400">3. Dead Battery Badge</span>
+            <span class="text-xs">🔋</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-tight">Honest worker whose badge died mid-trip. Rescued by
+            genuine customer proof.</p>
+        </button>
+
+        <!-- Preset 4 -->
+        <button onclick="applyPreset('review_ring')" id="btn_preset_review_ring"
+          class="preset-btn p-3 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 border border-rose-500/30 hover:border-rose-500 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-rose-400">4. Collusion Scam</span>
+            <span class="text-xs">🕵️</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-tight">Fake buyer & scammer worker trade 5-star ratings without
+            moving.</p>
+        </button>
+
+        <!-- Preset 5 -->
+        <button onclick="applyPreset('ghost')" id="btn_preset_ghost"
+          class="preset-btn p-3 rounded-xl bg-slate-800/80 hover:bg-purple-950/40 border border-purple-500/30 hover:border-purple-500 text-left transition space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-purple-400">5. Ghost Check-in</span>
+            <span class="text-xs">👻</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-tight">Accepted 45-min delivery and marked it complete in 1
+            minute with cloned tag.</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Interactive Grid: Controls Left, Big Verdict Right -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN: Simple Controls (7 cols) -->
+      <div class="lg:col-span-7 space-y-5">
+
+        <!-- Card 1: Who is involved? -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="text-indigo-400">👤</span> 1. Select Worker & Customer Profile
+            </h3>
+            <span class="text-[11px] text-slate-500">Pick profiles to test collusion</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Rider Selector -->
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Delivery Worker (Rider)</label>
+              <select id="sel_rider" onchange="onRiderChange()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition">
+                <option value="RDR-001" data-cat="honest">🚴 RDR-001 (Honest Driver - 99% Reliable)</option>
+                <option value="RDR-025" data-cat="honest">🚴 RDR-025 (Honest Driver - 98% Reliable)</option>
+                <option value="RDR-140" data-cat="offline">📶 RDR-140 (Remote Rural Worker - Dead Zones)</option>
+                <option value="RDR-170" data-cat="glitched">🔋 RDR-170 (Honest Worker - Faulty Hardware)</option>
+                <option value="RDR-185" data-cat="ring">🕵️ RDR-185 (Known Collusion Ring Member)</option>
+                <option value="RDR-195" data-cat="ghost">👻 RDR-195 (Ghost Scammer - Tag Cloner)</option>
+              </select>
+              <p id="rider_helper" class="text-[11px] text-emerald-400 mt-1">Verified legitimate delivery worker.</p>
+            </div>
+
+            <!-- Client Selector -->
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Recipient (Customer)</label>
+              <select id="sel_client" onchange="onClientChange()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition">
+                <option value="CLT-0050" data-sybil="0">👤 CLT-0050 (Legitimate Everyday Customer)</option>
+                <option value="CLT-0350" data-sybil="0">👤 CLT-0350 (Verified Regular Customer)</option>
+                <option value="CLT-2450" data-sybil="1">🚨 CLT-2450 (Suspected Collusive Bot Account)</option>
+                <option value="CLT-2499" data-sybil="1">🚨 CLT-2499 (Fake Review Ring Account)</option>
+              </select>
+              <p id="client_helper" class="text-[11px] text-emerald-400 mt-1">Genuine customer with verified purchase
+                history.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Physical Hardware Badge Proof -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="text-emerald-400">🛡️</span> 2. Physical Proof & ESP32 Smart Badge
+            </h3>
+            <span class="text-[11px] text-slate-400 font-mono" id="tier_preview_label">Tier: DEVICE SIGNED</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Hardware Badge Signature -->
+            <label
+              class="flex items-start gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500/60 transition group">
+              <input type="checkbox" id="chk_sig" checked onchange="runTest()"
+                class="mt-0.5 w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700">
+              <div>
+                <span class="text-xs font-bold text-white group-hover:text-indigo-300">ESP32 Cryptographic
+                  Signature</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">Physical hardware chip proved delivery without tampering.
+                </p>
+              </div>
+            </label>
+
+            <!-- Event Chain Intact -->
+            <label
+              class="flex items-start gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500/60 transition group">
+              <input type="checkbox" id="chk_chain" checked onchange="runTest()"
+                class="mt-0.5 w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700">
+              <div>
+                <span class="text-xs font-bold text-white group-hover:text-indigo-300">Hash Chain Intact</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">Timestamps are sequentially linked; no skipped steps.</p>
+              </div>
+            </label>
+
+            <!-- NFC Tap Present -->
+            <label
+              class="flex items-start gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500/60 transition group">
+              <input type="checkbox" id="chk_nfc" checked onchange="runTest()"
+                class="mt-0.5 w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700">
+              <div>
+                <span class="text-xs font-bold text-white group-hover:text-indigo-300">Customer NFC Tag Tapped</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">Badge touched the physical NFC sticker at customer door.
+                </p>
+              </div>
+            </label>
+
+            <!-- Offline Sync Mode -->
+            <label
+              class="flex items-start gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500/60 transition group">
+              <input type="checkbox" id="chk_offline" onchange="runTest()"
+                class="mt-0.5 w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700">
+              <div>
+                <span class="text-xs font-bold text-white group-hover:text-indigo-300">Saved Offline in Flash
+                  Buffer</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">Delivery happened in cellular dead-zone and synced later.
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Card 3: Worker App Checkpoints & Customer Response -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span class="text-sky-400">📱</span> 3. App Checkpoints & Customer Reaction
+          </h3>
+
+          <div class="space-y-3">
+            <div class="text-xs font-semibold text-slate-300">Worker Logged Events:</div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <label
+                class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500 transition block">
+                <input type="checkbox" id="chk_arr" checked onchange="runTest()"
+                  class="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 mb-1">
+                <div class="text-[11px] font-bold text-slate-200">1. Arrived</div>
+              </label>
+
+              <label
+                class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500 transition block">
+                <input type="checkbox" id="chk_start" checked onchange="runTest()"
+                  class="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 mb-1">
+                <div class="text-[11px] font-bold text-slate-200">2. Picked Up</div>
+              </label>
+
+              <label
+                class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-indigo-500 transition block">
+                <input type="checkbox" id="chk_fin" checked onchange="runTest()"
+                  class="w-4 h-4 rounded text-indigo-600 bg-slate-900 border-slate-700 mb-1">
+                <div class="text-[11px] font-bold text-slate-200">3. Handed Over</div>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <!-- Customer Confirmation -->
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Customer Confirmation</label>
+              <select id="sel_confirm" onchange="runTest()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition">
+                <option value="1">✅ Customer clicked "Order Received"</option>
+                <option value="0">⚪ Customer did not confirm</option>
+              </select>
+            </div>
+
+            <!-- Dispute Filed -->
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Customer Complaint / Dispute</label>
+              <select id="sel_dispute" onchange="runTest()"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition">
+                <option value="0">🟢 No Dispute (All good)</option>
+                <option value="1">🚨 Dispute Filed ("Never got my food!")</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Trip Duration & Speed Sanity Check -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="text-amber-400">⏱️</span> 4. Transit Duration & Sanity Check
+            </h3>
+            <span id="speed_badge"
+              class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Realistic Travel Time
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Expected Duration -->
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span>Expected Trip Time:</span>
+                <span id="lbl_sched" class="font-bold text-indigo-400">45 mins</span>
+              </div>
+              <input type="range" id="rng_sched" min="15" max="90" value="45" oninput="onDurationInput()"
+                class="w-full accent-indigo-500">
+            </div>
+
+            <!-- Actual Duration -->
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span>Actual Time Taken:</span>
+                <span id="lbl_actual" class="font-bold text-emerald-400">42 mins</span>
+              </div>
+              <input type="range" id="rng_actual" min="1" max="120" value="42" oninput="onDurationInput()"
+                class="w-full accent-indigo-500">
+            </div>
+          </div>
+
+          <div id="duration_note"
+            class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 flex items-center gap-2">
+            <span>ℹ️</span>
+            <span>Duration ratio is <strong>0.93</strong>. Delivery took a realistic amount of time.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Big Verdict & Plain-English Explanation (5 cols sticky) -->
+      <div class="lg:col-span-5 space-y-5 lg:sticky lg:top-8">
+
+        <!-- Master Verdict Card -->
+        <div id="verdict_card"
+          class="rounded-2xl p-6 border-2 transition-all duration-300 bg-emerald-950/40 border-emerald-500/60 shadow-2xl shadow-emerald-950/40 space-y-5">
+
+          <!-- Top status pill & icon -->
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">TrustTier Final Verdict</span>
+            <span id="verdict_badge"
+              class="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-emerald-500 text-slate-950 shadow-md">
+              APPROVED
+            </span>
+          </div>
+
+          <!-- Giant Headline -->
+          <div class="space-y-1">
+            <div class="text-4xl" id="verdict_icon">✅</div>
+            <h2 id="verdict_title" class="text-2xl font-black tracking-tight text-emerald-400">
+              LEGITIMATE DELIVERY
+            </h2>
+            <p id="verdict_subtitle" class="text-xs text-slate-300">
+              Approved for rider payout. Physical proof verified.
+            </p>
+          </div>
+
+          <!-- Big Confidence Meter -->
+          <div class="bg-slate-950/70 rounded-xl p-4 border border-slate-800 space-y-2">
+            <div class="flex justify-between items-baseline">
+              <span class="text-xs font-medium text-slate-400">Confidence Score:</span>
+              <span id="verdict_prob" class="text-3xl font-black font-mono text-emerald-400">99.2%</span>
+            </div>
+            <!-- Bar -->
+            <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden p-0.5 border border-slate-800">
+              <div id="prob_bar"
+                class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-500"
+                style="width: 99.2%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>0% Fraud</span>
+              <span>Threshold: 50%</span>
+              <span>100% Genuine</span>
+            </div>
+          </div>
+
+          <!-- Plain-English Explanation (Why?) -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <span>💡</span> Why did TrustTier make this decision?
+            </h4>
+            <ul id="verdict_bullets" class="space-y-2 text-xs text-slate-300">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <!-- Side-by-side comparison: TrustTier vs Naive Apps -->
+          <div class="border-t border-slate-800/80 pt-4 space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400">System Comparison:</div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Regular App Rating:</span>
+                <span id="cmp_naive" class="text-sm font-bold text-emerald-400">95% (Fooled)</span>
+                <p id="cmp_naive_expl" class="text-[10px] text-slate-400 mt-0.5 leading-tight">Only trusts star reviews
+                </p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-950/80 border border-indigo-500/40">
+                <span class="text-[10px] uppercase font-bold text-indigo-300 block">TrustTier Graph BP:</span>
+                <span id="cmp_trust" class="text-sm font-bold text-emerald-400">99.2% Genuine</span>
+                <p id="cmp_trust_expl" class="text-[10px] text-slate-400 mt-0.5 leading-tight">Weighs hardware & graph
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collapsible technical breakdown for reviewers/professors -->
+          <details class="text-xs text-slate-400 border-t border-slate-800 pt-3 cursor-pointer">
+            <summary
+              class="font-semibold text-slate-300 hover:text-white transition select-none flex items-center justify-between">
+              <span class="flex items-center gap-2">
+                <span>🔬</span>
+                <span>Live Model Inspector & 21-Feature Vector</span>
+              </span>
+              <span class="text-xs text-indigo-400 font-mono">Show Math &darr;</span>
+            </summary>
+
+            <div class="mt-3 space-y-3">
+              <div
+                class="p-3 rounded-xl bg-slate-950 font-mono text-[11px] space-y-1.5 border border-slate-800 text-slate-300">
+                <div class="text-[10px] uppercase font-bold text-slate-500 mb-1">Key Bayesian & Graph Signals:</div>
+                <div class="flex justify-between">
+                  <span>Evidence Tier:</span>
+                  <span id="tech_tier" class="text-indigo-400 font-bold">device_signed</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Bayesian Likelihood Ratio (LR):</span>
+                  <span id="tech_lr" class="text-emerald-400 font-bold">48.95x</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Client Credibility Weight (W_c):</span>
+                  <span id="tech_wc" class="text-sky-400 font-bold">0.85</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Rider Graph Belief (B_r):</span>
+                  <span id="tech_br" class="text-amber-400 font-bold">0.99</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Graph Edge Log-LR:</span>
+                  <span id="tech_edge_lr" class="text-purple-400 font-bold">+2.81</span>
+                </div>
+              </div>
+
+              <!-- Raw 21 Feature Vector JSON -->
+              <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase font-bold">
+                  <span>Exact 21-Feature Vector Passed to predict_proba():</span>
+                  <span id="vector_source" class="text-emerald-400 font-mono">LIVE API</span>
+                </div>
+                <pre id="raw_vector_display"
+                  class="font-mono text-[10px] text-slate-300 bg-slate-900/90 p-2.5 rounded-lg overflow-x-auto max-h-48 leading-relaxed"></pre>
+              </div>
+            </div>
+          </details>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // Known client weights from belief propagation
+    const clientWeights = {
+      'CLT-0050': 0.85,
+      'CLT-0350': 0.88,
+      'CLT-2450': 0.02, // Collusive Sybil
+      'CLT-2499': 0.01  // Collusive Sybil
+    };
+
+    const riderBeliefs = {
+      'RDR-001': 0.99,
+      'RDR-025': 0.98,
+      'RDR-140': 0.96,
+      'RDR-170': 0.82,
+      'RDR-185': 0.03, // Collusion
+      'RDR-195': 0.02  // Ghost
+    };
+
+    const tierLRs = {
+      'device_signed': 48.95,
+      'nfc': 1.88,
+      'mixed': 0.25,
+      'self_reported': 0.09
+    };
+
+    function onRiderChange() {
+      const sel = document.getElementById('sel_rider');
+      const helper = document.getElementById('rider_helper');
+      const val = sel.value;
+
+      if (val === 'RDR-185') {
+        helper.innerText = '🚨 Scammer rider: repeatedly colludes with fake buyer accounts!';
+        helper.className = 'text-[11px] text-rose-400 mt-1 font-semibold';
+      } else if (val === 'RDR-195') {
+        helper.innerText = '👻 Ghost attacker: accepts orders and marks them done in seconds!';
+        helper.className = 'text-[11px] text-purple-400 mt-1 font-semibold';
+      } else if (val === 'RDR-170') {
+        helper.innerText = '🔋 Honest worker: hardware badge has dead battery issues.';
+        helper.className = 'text-[11px] text-amber-400 mt-1 font-semibold';
+      } else if (val === 'RDR-140') {
+        helper.innerText = '📶 Honest rural worker: frequently operates in Gwadar dead zones.';
+        helper.className = 'text-[11px] text-sky-400 mt-1 font-semibold';
+      } else {
+        helper.innerText = '🚴 Verified honest worker with strong track record.';
+        helper.className = 'text-[11px] text-emerald-400 mt-1';
+      }
+      runTest();
+    }
+
+    function onClientChange() {
+      const sel = document.getElementById('sel_client');
+      const helper = document.getElementById('client_helper');
+      const val = sel.value;
+
+      if (val === 'CLT-2450' || val === 'CLT-2499') {
+        helper.innerText = '🚨 Fake / Sybil account: member of a coordinated fake-review ring!';
+        helper.className = 'text-[11px] text-rose-400 mt-1 font-semibold';
+      } else {
+        helper.innerText = '👤 Genuine customer with verified purchase history.';
+        helper.className = 'text-[11px] text-emerald-400 mt-1';
+      }
+      runTest();
+    }
+
+    function onDurationInput() {
+      const sched = parseInt(document.getElementById('rng_sched').value);
+      const actual = parseInt(document.getElementById('rng_actual').value);
+
+      document.getElementById('lbl_sched').innerText = `${sched} mins`;
+      document.getElementById('lbl_actual').innerText = `${actual} mins`;
+
+      const ratio = actual / sched;
+      const note = document.getElementById('duration_note');
+      const badge = document.getElementById('speed_badge');
+
+      if (ratio < 0.25) {
+        badge.innerText = '🚨 Teleport / Ghost Speed';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        note.innerHTML = `⚠️ <strong class="text-rose-400">Suspicious:</strong> Took only ${actual} mins on a ${sched}-minute trip (Ratio: ${ratio.toFixed(2)}). Impossible transit speed!`;
+      } else if (ratio > 2.0) {
+        badge.innerText = '⚠️ Severe Transit Delay';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        note.innerHTML = `⚠️ <strong class="text-amber-400">Delayed:</strong> Took ${actual} mins on a ${sched}-minute trip. Likely traffic or vehicle issue.`;
+      } else {
+        badge.innerText = 'Realistic Travel Time';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        note.innerHTML = `ℹ️ Duration ratio is <strong>${ratio.toFixed(2)}</strong>. Delivery transit time matches expected road speeds.`;
+      }
+
+      runTest();
+    }
+
+    function applyPreset(type) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('ring-2', 'ring-indigo-500'));
+
+      if (type === 'honest') {
+        document.getElementById('btn_preset_honest').classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('sel_rider').value = 'RDR-001';
+        document.getElementById('sel_client').value = 'CLT-0050';
+        document.getElementById('chk_sig').checked = true;
+        document.getElementById('chk_chain').checked = true;
+        document.getElementById('chk_nfc').checked = true;
+        document.getElementById('chk_offline').checked = false;
+        document.getElementById('chk_arr').checked = true;
+        document.getElementById('chk_start').checked = true;
+        document.getElementById('chk_fin').checked = true;
+        document.getElementById('sel_confirm').value = '1';
+        document.getElementById('sel_dispute').value = '0';
+        document.getElementById('rng_sched').value = 45;
+        document.getElementById('rng_actual').value = 42;
+      } else if (type === 'offline') {
+        document.getElementById('btn_preset_offline').classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('sel_rider').value = 'RDR-140';
+        document.getElementById('sel_client').value = 'CLT-0350';
+        document.getElementById('chk_sig').checked = true;
+        document.getElementById('chk_chain').checked = true;
+        document.getElementById('chk_nfc').checked = true;
+        document.getElementById('chk_offline').checked = true;
+        document.getElementById('chk_arr').checked = true;
+        document.getElementById('chk_start').checked = true;
+        document.getElementById('chk_fin').checked = true;
+        document.getElementById('sel_confirm').value = '1';
+        document.getElementById('sel_dispute').value = '0';
+        document.getElementById('rng_sched').value = 50;
+        document.getElementById('rng_actual').value = 55;
+      } else if (type === 'glitched') {
+        document.getElementById('btn_preset_glitched').classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('sel_rider').value = 'RDR-170';
+        document.getElementById('sel_client').value = 'CLT-0050';
+        document.getElementById('chk_sig').checked = false;
+        document.getElementById('chk_chain').checked = false;
+        document.getElementById('chk_nfc').checked = false;
+        document.getElementById('chk_offline').checked = false;
+        document.getElementById('chk_arr').checked = true;
+        document.getElementById('chk_start').checked = true;
+        document.getElementById('chk_fin').checked = false; // Glitched finish
+        document.getElementById('sel_confirm').value = '1'; // Honest buyer confirms!
+        document.getElementById('sel_dispute').value = '0';
+        document.getElementById('rng_sched').value = 40;
+        document.getElementById('rng_actual').value = 38;
+      } else if (type === 'review_ring') {
+        document.getElementById('btn_preset_review_ring').classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('sel_rider').value = 'RDR-185';
+        document.getElementById('sel_client').value = 'CLT-2450';
+        document.getElementById('chk_sig').checked = false;
+        document.getElementById('chk_chain').checked = false;
+        document.getElementById('chk_nfc').checked = false;
+        document.getElementById('chk_offline').checked = false;
+        document.getElementById('chk_arr').checked = 1;
+        document.getElementById('chk_start').checked = 1;
+        document.getElementById('chk_fin').checked = 1;
+        document.getElementById('sel_confirm').value = '1'; // Fake confirmation!
+        document.getElementById('sel_dispute').value = '0';
+        document.getElementById('rng_sched').value = 45;
+        document.getElementById('rng_actual').value = 40;
+      } else if (type === 'ghost') {
+        document.getElementById('btn_preset_ghost').classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('sel_rider').value = 'RDR-195';
+        document.getElementById('sel_client').value = 'CLT-0050';
+        document.getElementById('chk_sig').checked = false;
+        document.getElementById('chk_chain').checked = false;
+        document.getElementById('chk_nfc').checked = true; // Cloned tag tap
+        document.getElementById('chk_offline').checked = false;
+        document.getElementById('chk_arr').checked = true;
+        document.getElementById('chk_start').checked = false;
+        document.getElementById('chk_fin').checked = true;
+        document.getElementById('sel_confirm').value = '0';
+        document.getElementById('sel_dispute').value = '1'; // Buyer complained
+        document.getElementById('rng_sched').value = 45;
+        document.getElementById('rng_actual').value = 3;  // Completed in 3 mins!
+      }
+
+      onRiderChange();
+      onClientChange();
+      onDurationInput();
+    }
+
+    async function runTest() {
+      const riderId = document.getElementById('sel_rider').value;
+      const clientId = document.getElementById('sel_client').value;
+      const nfc = document.getElementById('chk_nfc').checked ? 1 : 0;
+      const sig = document.getElementById('chk_sig').checked ? 1 : 0;
+      const chain = document.getElementById('chk_chain').checked ? 1 : 0;
+      const offline = document.getElementById('chk_offline').checked ? 1 : 0;
+      const arr = document.getElementById('chk_arr').checked ? 1 : 0;
+      const start = document.getElementById('chk_start').checked ? 1 : 0;
+      const fin = document.getElementById('chk_fin').checked ? 1 : 0;
+      const confirm = parseInt(document.getElementById('sel_confirm').value);
+      const dispute = parseInt(document.getElementById('sel_dispute').value);
+      const sched = parseInt(document.getElementById('rng_sched').value);
+      const actual = parseFloat(document.getElementById('rng_actual').value);
+
+      // Determine evidence tier
+      let tier = 'mixed';
+      if (sig === 1 && chain === 1 && arr === 1 && fin === 1) {
+        tier = 'device_signed';
+      } else if (nfc === 1 && arr === 1 && fin === 1 && !(sig === 1 && chain === 1)) {
+        tier = 'nfc';
+      } else if (nfc === 0 && sig === 0 && chain === 0) {
+        tier = 'self_reported';
+      }
+
+      document.getElementById('tier_preview_label').innerText = `Tier: ${tier.replace('_', ' ').toUpperCase()}`;
+
+      // Payload for API
+      const payload = {
+        rider_id: riderId,
+        client_id: clientId,
+        nfc_tap_present: nfc,
+        arrival_event_present: arr,
+        start_event_present: start,
+        finish_event_present: fin,
+        device_signature_valid: sig,
+        event_chain_valid: chain,
+        offline_sync: offline,
+        scheduled_duration_minutes: sched,
+        actual_duration_minutes: actual,
+        arrival_delay_minutes: Math.max(0, actual - sched),
+        client_confirmation: confirm,
+        dispute_filed: dispute
+      };
+
+      // Try server API first
+      const apiUrl = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ? '/api/predict'
+        : 'http://127.0.0.1:8000/api/predict';
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+
+          // Update engine status bar with live model proof
+          document.getElementById('engine_dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+          document.getElementById('engine_status_text').innerHTML = `🟢 LIVE PYTHON BACKEND (<span class="text-white">${data.engine_info.model_file}</span>)`;
+          document.getElementById('engine_type').innerText = data.engine_info.model_type;
+          document.getElementById('engine_trees').innerText = `${data.engine_info.n_trees} Trees`;
+          document.getElementById('engine_latency').innerText = `${data.engine_info.inference_ms} ms`;
+
+          // Update tech details & feature vector
+          document.getElementById('tech_edge_lr').innerText = `${data.graph_context.edge_log_lr > 0 ? '+' : ''}${data.graph_context.edge_log_lr.toFixed(2)}`;
+          document.getElementById('raw_vector_display').innerText = JSON.stringify(data.engine_info.raw_input_vector, null, 2);
+          document.getElementById('vector_source').innerText = `LIVE API (${data.engine_info.features_count} FEATS)`;
+
+          renderResult(data.models.trusttier_full.prob, tier, data.empirical_lr, {
+            wClient: data.graph_context.client_credibility_weight,
+            isGhost: data.timing_metrics.is_ghost_duration,
+            confirm: confirm,
+            dispute: dispute,
+            sig: sig,
+            offline: offline,
+            fin: fin,
+            edgeLogLR: data.graph_context.edge_log_lr,
+            isLive: true
+          });
+          return;
+        }
+      } catch (e) {
+        // Fallback indicator if server not reachable
+        document.getElementById('engine_dot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+        document.getElementById('engine_status_text').innerHTML = `⚠️ OFFLINE STANDALONE DEMO (Python server not running on port 8000)`;
+        document.getElementById('engine_type').innerText = 'JS Math Approximation';
+        document.getElementById('engine_trees').innerText = 'Formula';
+        document.getElementById('engine_latency').innerText = '< 0.5 ms';
+        document.getElementById('vector_source').innerText = 'STANDALONE';
+        document.getElementById('raw_vector_display').innerText = '// Python ui_server.py not detected. Run `python ui_server.py` to activate live 107-tree ensemble!\n' + JSON.stringify(payload, null, 2);
+      }
+
+      // Client-side fallback computation
+      const ratio = actual / sched;
+      const isGhost = ratio < 0.25;
+      const wClient = clientWeights[clientId] !== undefined ? clientWeights[clientId] : 0.85;
+
+      let prob = 0.50;
+      if (wClient < 0.20) {
+        // Collusion ring
+        prob = 0.038;
+      } else if (dispute === 1) {
+        prob = 0.045;
+      } else if (isGhost) {
+        prob = 0.052;
+      } else if (tier === 'device_signed' && confirm === 1) {
+        prob = 0.992;
+      } else if (tier === 'device_signed' && confirm === 0) {
+        prob = 0.954;
+      } else if (tier === 'nfc' && confirm === 1) {
+        prob = 0.885;
+      } else if (fin === 0 && confirm === 1 && wClient > 0.70) {
+        // Glitched badge rescued by legitimate client
+        prob = 0.768;
+      } else {
+        prob = 0.125;
+      }
+
+      renderResult(prob, tier, tierLRs[tier], {
+        wClient: wClient,
+        isGhost: isGhost,
+        confirm: confirm,
+        dispute: dispute,
+        sig: sig,
+        offline: offline,
+        fin: fin
+      });
+    }
+
+    function renderResult(prob, tier, lr, details) {
+      const isApproved = prob >= 0.50;
+      const card = document.getElementById('verdict_card');
+      const badge = document.getElementById('verdict_badge');
+      const icon = document.getElementById('verdict_icon');
+      const title = document.getElementById('verdict_title');
+      const subtitle = document.getElementById('verdict_subtitle');
+      const probText = document.getElementById('verdict_prob');
+      const bar = document.getElementById('prob_bar');
+      const bullets = document.getElementById('verdict_bullets');
+
+      probText.innerText = (prob * 100).toFixed(1) + '%';
+      bar.style.width = Math.min(100, Math.max(0, prob * 100)) + '%';
+
+      // Update tech details
+      document.getElementById('tech_tier').innerText = tier;
+      document.getElementById('tech_lr').innerText = `${lr.toFixed(2)}x`;
+      document.getElementById('tech_wc').innerText = details.wClient.toFixed(2);
+      document.getElementById('tech_br').innerText = (prob).toFixed(2);
+
+      bullets.innerHTML = '';
+
+      if (isApproved) {
+        // Green / Legitimate
+        card.className = 'rounded-2xl p-6 border-2 transition-all duration-300 bg-emerald-950/40 border-emerald-500/60 shadow-2xl shadow-emerald-950/50 space-y-5';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-emerald-500 text-slate-950 shadow-md';
+        badge.innerText = 'APPROVED';
+        icon.innerText = '✅';
+        title.innerText = 'LEGITIMATE DELIVERY';
+        title.className = 'text-2xl font-black tracking-tight text-emerald-400';
+        subtitle.innerText = 'Verified genuine gig work. Worker payout released.';
+        probText.className = 'text-3xl font-black font-mono text-emerald-400';
+        bar.className = 'bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-500';
+
+        if (tier === 'device_signed') {
+          bullets.innerHTML += `<li><strong class="text-emerald-300">ESP32 Hardware Verified:</strong> Tamper-proof cryptographic signature and hash chain confirm the worker was physically on-site.</li>`;
+        } else if (tier === 'nfc') {
+          bullets.innerHTML += `<li><strong class="text-sky-300">NFC Tag Contact:</strong> Physical NFC sticker at customer door was confirmed.</li>`;
+        }
+
+        if (details.confirm === 1) {
+          bullets.innerHTML += `<li><strong class="text-emerald-300">Credible Confirmation:</strong> Recipient acknowledged delivery from a trusted, non-collusive customer account.</li>`;
+        }
+
+        if (details.offline === 1) {
+          bullets.innerHTML += `<li><strong class="text-sky-300">Offline Resilience:</strong> Flash buffer stored cryptographically signed events in dead zone and synced safely.</li>`;
+        }
+
+        if (details.fin === 0 && details.confirm === 1) {
+          bullets.innerHTML += `<li><strong class="text-amber-300">Glitched Badge Rescued:</strong> Even though the badge finish event glitched, genuine customer confirmation prevented wrongful penalty.</li>`;
+        }
+
+        // Compare
+        document.getElementById('cmp_naive').innerText = details.confirm ? '100% Genuine' : '0% Rejected';
+        document.getElementById('cmp_naive').className = 'text-sm font-bold text-slate-300';
+        document.getElementById('cmp_trust').innerText = `${(prob * 100).toFixed(1)}% Genuine`;
+        document.getElementById('cmp_trust').className = 'text-sm font-bold text-emerald-400';
+
+      } else {
+        // Red / Fraud
+        card.className = 'rounded-2xl p-6 border-2 transition-all duration-300 bg-rose-950/40 border-rose-500/60 shadow-2xl shadow-rose-950/50 space-y-5';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-md';
+        badge.innerText = 'REJECTED';
+        icon.innerText = '🚨';
+        title.innerText = 'FRAUD / INCOMPLETE DETECTED';
+        title.className = 'text-2xl font-black tracking-tight text-rose-400';
+        subtitle.innerText = 'Payment withheld. Evidence does not support physical completion.';
+        probText.className = 'text-3xl font-black font-mono text-rose-400';
+        bar.className = 'bg-gradient-to-r from-rose-500 to-amber-500 h-2 rounded-full transition-all duration-500';
+
+        if (details.wClient < 0.20) {
+          bullets.innerHTML += `<li><strong class="text-rose-400">Sybil Review Ring Caught:</strong> Customer has a credibility weight of only ${details.wClient.toFixed(2)}. Their 5-star review was flagged as collusion and discarded.</li>`;
+        }
+
+        if (details.isGhost) {
+          bullets.innerHTML += `<li><strong class="text-rose-400">Ghost Check-In:</strong> Order was marked complete impossibly fast (< 25% of scheduled time). Physical transit was skipped.</li>`;
+        }
+
+        if (!details.sig) {
+          bullets.innerHTML += `<li><strong class="text-slate-300">Missing Physical Signature:</strong> No valid cryptographic signature from an assigned ESP32 badge.</li>`;
+        }
+
+        if (details.dispute === 1) {
+          bullets.innerHTML += `<li><strong class="text-rose-400">Customer Dispute:</strong> Recipient filed an active complaint stating the delivery never arrived.</li>`;
+        }
+
+        // Compare: Highlight where naive app fails!
+        if (details.wClient < 0.20 && details.confirm === 1) {
+          document.getElementById('cmp_naive').innerText = '100% (FOOLED!)';
+          document.getElementById('cmp_naive').className = 'text-sm font-bold text-rose-400 animate-pulse';
+          document.getElementById('cmp_naive_expl').innerText = 'Naive app fell for fake 5-star review';
+          document.getElementById('cmp_trust').innerText = `${(prob * 100).toFixed(1)}% Fraud`;
+          document.getElementById('cmp_trust').className = 'text-sm font-bold text-rose-400';
+          document.getElementById('cmp_trust_expl').innerText = 'TrustTier graph caught the collusion ring';
+        } else {
+          document.getElementById('cmp_naive').innerText = details.confirm ? '100% Genuine' : '0% Rejected';
+          document.getElementById('cmp_naive').className = 'text-sm font-bold text-slate-300';
+          document.getElementById('cmp_trust').innerText = `${(prob * 100).toFixed(1)}% (Blocked)`;
+          document.getElementById('cmp_trust').className = 'text-sm font-bold text-rose-400';
+        }
+      }
+    }
+
+    // Auto load honest scenario on initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      applyPreset('honest');
+    });
+  </script>
+</body>
+
+</html>
