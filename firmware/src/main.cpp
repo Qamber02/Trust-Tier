@@ -12,6 +12,9 @@
 #include "pins.h"
 #include "secrets.h"
 
+static_assert(sizeof(DEVICE_PRIVATE_KEY_HEX) == 65,
+              "Set the provisioned 32-byte Ed25519 private key as 64 hex characters");
+
 MFRC522 rfid(PIN_SS, PIN_RFID_RST);
 ThreeWire ds1302Wire(PIN_DS1302_DAT, PIN_DS1302_CLK, PIN_DS1302_RST);
 RtcDS1302<ThreeWire> rtc(ds1302Wire);
