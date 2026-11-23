@@ -316,3 +316,9 @@ def attack_test():
     flat = {worker: sum(1 for event in _events.values() if event["worker_id"] == worker and event["payload"].get("client_confirmation")) for worker in _scores}
     tiered = {worker: score["score"] for worker, score in _scores.items()}
     return {"flat_average": flat, "tiered_scores": tiered, "workers": sorted(tiered, key=tiered.get, reverse=True)}
+
+
+@router.get("/config/public")
+def public_config():
+    # Publish only Supabase's public URL/anon key. The service-role key is never returned.
+    return {"supabase_url": os.getenv("SUPABASE_URL", ""), "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", "")}

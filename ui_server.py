@@ -556,11 +556,22 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    index_file = os.path.join(STATIC_DIR, "index.html")
+    index_file = os.path.join(STATIC_DIR, "live.html")
+    if not os.path.exists(index_file):
+        index_file = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_file):
         with open(index_file, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse("<h2>TrustTier API is running. index.html is being prepared...</h2>")
+
+
+@app.get("/legacy", response_class=HTMLResponse)
+async def serve_legacy_dashboard():
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Legacy analytics dashboard is unavailable.</h2>")
 
 
 @app.get("/simple", response_class=HTMLResponse)

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TrustTier Live Operations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>body{background:#070b14;color:#e2e8f0}.card{background:#111827;border:1px solid #263244}.pop{animation:pop .65s ease}@keyframes pop{50%{transform:scale(1.09);color:#34d399}}</style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+<main class="max-w-7xl mx-auto space-y-5">
+  <header class="flex flex-wrap justify-between items-center gap-3"><div><p class="text-emerald-400 text-xs uppercase tracking-widest">TrustTier operations</p><h1 class="text-3xl font-bold">Live trust network</h1><p class="text-slate-400">Signed badge events · scores update as evidence arrives</p></div><div id="connection" class="rounded-full bg-slate-800 px-4 py-2 text-sm">Connecting…</div></header>
+  <section class="grid md:grid-cols-3 gap-4"><article class="card rounded-xl p-4"><p class="text-slate-400">Events received</p><b id="event-count" class="text-3xl">0</b></article><article class="card rounded-xl p-4"><p class="text-slate-400">Rejected / tampered</p><b id="reject-count" class="text-3xl text-rose-400">0</b></article><article class="card rounded-xl p-4"><p class="text-slate-400">Realtime updates</p><b id="updates" class="text-3xl">0</b></article></section>
+  <section class="grid lg:grid-cols-2 gap-4">
+    <article class="card rounded-xl p-4"><h2 class="font-bold text-lg mb-3">Badge event feed</h2><div id="events" class="space-y-2 max-h-96 overflow-auto"></div></article>
+    <article class="card rounded-xl p-4"><h2 class="font-bold text-lg mb-3">Worker trust scores</h2><div id="scores" class="space-y-2 max-h-96 overflow-auto"></div></article>
+    <article class="card rounded-xl p-4"><h2 class="font-bold text-lg mb-3">Graph neighborhood</h2><p class="text-xs text-slate-400 mb-3">Edges are stored in Postgres and traversed with the indexed recursive CTE. Recent worker-to-client links:</p><div id="graph" class="text-sm space-y-2">Waiting for graph edges…</div></article>
+    <article class="card rounded-xl p-4"><h2 class="font-bold text-lg mb-3">Disputes & reviews</h2><div id="feedback" class="text-sm space-y-2">No recent feedback.</div></article>
+    <article class="card rounded-xl p-4 lg:col-span-2"><h2 class="font-bold text-lg mb-3">Attack test · tiered score vs flat confirmation</h2><div id="attack" class="grid sm:grid-cols-2 gap-3"></div></article>
+  </section>
+  <p class="text-xs text-slate-500">No service-role credential is sent to this page. Without Supabase configuration, the demo polls the local API.</p>
+</main>
+<script>
+const api='/api'; let realtime=null, updateCount=0; const tierColor={signed:'text-emerald-300',nfc:'text-sky-300',self:'text-slate-300'};
+function safe(s){const d=document.createElement('span');d.textContent=s??'';return d.innerHTML}
+function scoreRows(rows){document.querySelector('#scores').innerHTML=rows.sort((a,b)=>b.score-a.score).slice(0,40).map(x=>`<div class="flex items-center gap-3 border-b border-slate-800 pb-2"><b>${safe(x.worker_id)}</b><div class="grow bg-slate-800 rounded h-2"><div class="bg-emerald-400 h-2 rounded transition-all duration-700" style="width:${Math.max(0,Math.min(100,x.score*100))}%"></div></div><b class="score-value">${(x.score*100).toFixed(1)}%</b></div>`).join('')||'<p class="text-slate-500">No scores yet; send a simulator batch.</p>'}
+function eventRows(rows){document.querySelector('#events').innerHTML=rows.slice(0,50).map(e=>`<div class="border-b border-slate-800 pb-2"><div class="flex justify-between"><b>${safe(e.worker_id)} · ${safe(e.type)}</b><span class="${e.verified?'text-emerald-300':'text-rose-300'}">${e.verified?'VERIFIED':'REJECTED'}</span></div><div class="text-xs text-slate-400"><span class="${tierColor[e.evidence_tier]||''}">${safe(e.evidence_tier)}</span> · ${safe(e.synced_at||e.device_ts||'')}</div>${e.rejection_reason?`<p class="text-xs text-rose-300">${safe(e.rejection_reason)}</p>`:''}</div>`).join('')||'<p class="text-slate-500">No badge events received.</p>';document.querySelector('#event-count').textContent=rows.length;document.querySelector('#reject-count').textContent=rows.filter(e=>!e.verified).length}
+async function load(){try{const [ev,sc,rv,dp]=await Promise.all(['live/events','trust-scores','reviews','disputes'].map(p=>fetch(`${api}/${p}`).then(r=>r.json())));eventRows(ev);scoreRows(sc);const feedback=[...rv.map(x=>`★${x.stars} ${safe(x.body)}`),...dp.map(x=>`⚠ ${safe(x.reason)} (${safe(x.status)})`)];document.querySelector('#feedback').innerHTML=feedback.slice(-20).reverse().join('<br>')||'No recent feedback.';const at=await fetch(`${api}/attack-test`).then(r=>r.json());document.querySelector('#attack').innerHTML=Object.keys(at.tiered_scores||{}).map(id=>`<div class="rounded bg-slate-900 p-3"><b>${safe(id)}</b><div>Tiered ${((at.tiered_scores[id]||0)*100).toFixed(1)}% · Flat ${(100*(at.flat_average[id]||0)).toFixed(1)}%</div></div>`).join('')||'<p class="text-slate-500">Events required to calculate ranking.</p>'}catch(e){document.querySelector('#connection').textContent='API unavailable';}}
+async function init(){await load();const cfg=await fetch(`${api}/config/public`).then(r=>r.json()).catch(()=>({}));if(window.supabase&&cfg.supabase_url&&cfg.supabase_anon_key){const sb=window.supabase.createClient(cfg.supabase_url,cfg.supabase_anon_key);realtime=sb.channel('trusttier-live').on('postgres_changes',{event:'*',schema:'public',table:'events'},()=>{updateCount++;document.querySelector('#updates').textContent=updateCount;load()}).on('postgres_changes',{event:'*',schema:'public',table:'trust_scores'},()=>{updateCount++;document.querySelector('#updates').textContent=updateCount;load()}).on('postgres_changes',{event:'*',schema:'public',table:'disputes'},load).on('postgres_changes',{event:'*',schema:'public',table:'reviews'},load).subscribe(status=>document.querySelector('#connection').textContent=status==='SUBSCRIBED'?'Supabase Realtime connected':status)}else{document.querySelector('#connection').textContent='Local API demo · 2s polling';setInterval(load,2000)}}init();
+</script>
+</body></html>
