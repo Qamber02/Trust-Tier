@@ -99,7 +99,7 @@ MIT License. Built for course research on Advanced Distributed and Mobile System
 The original model dashboard remains available at `/legacy`. The root URL now serves the live operations dashboard (`static/live.html`), which subscribes to Supabase Realtime when configured and otherwise refreshes the local API demo every two seconds.
 
 1. Install Python dependencies: `python -m pip install -r requirements.txt`.
-2. Copy `.env.example` to `.env`; configure Supabase URL, anon key and **server-only** service role key. Apply `supabase/migrations/202611230001_initial_trusttier.sql` in the Supabase SQL editor. Never put the service role key in a Flutter app or browser.
+2. Copy `.env.example` to `.env`; configure Supabase URL, anon key and **server-only** service role key. Apply both migrations in `supabase/migrations/` in order via the Supabase SQL editor. Enable Supabase Anonymous Sign-Ins for read-only score Realtime in the demo clients. Never put the service role key in a Flutter app or browser.
 3. Start the API: `uvicorn ui_server:app --host 0.0.0.0 --port 8000`. Seed workers and clients with `python tools/seed_supabase.py` (requires Supabase credentials).
 4. Test live sync locally: `python tools/provision_badge.py --device DEMO-ESP32-001 --worker RDR-025`, then `python tools/badge_simulator.py --offline --tampered`. The simulator keeps its private key in an ignored local file.
 5. Generate up to one million synthetic rows with `python tools/generate_live_data.py --events 1000000`; run the graph benchmark with `python tools/benchmark_graph.py` (SQLite emulates indexed relational and recursive traversal; it is not a hosted Supabase latency claim).
