@@ -22,6 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from trusttier_live import router as live_router
 
 # Unpickling compatibility bridge for Kaggle-trained scikit-learn models
 try:
@@ -44,6 +45,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(live_router)
 
 # Load data and trained models
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -573,4 +575,3 @@ async def serve_simple():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("ui_server:app", host="127.0.0.1", port=8000, reload=False)
-
