@@ -7,5 +7,5 @@
 #define DEVICE_ID "ESP32-DEMO-001"
 #define WORKER_ID "RDR-025"
 #define CLIENT_ID "CLT-0350"
-// The signed-message implementation uses an Ed25519 private key in raw 32-byte hex form.
+// Copy private_key_hex from tools/provision_badge.py output. Keep this file local/private.
 #define DEVICE_PRIVATE_KEY_HEX ""

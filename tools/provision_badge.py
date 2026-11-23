@@ -20,7 +20,11 @@ def main():
     key = Ed25519PrivateKey.generate()
     raw = key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
     pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-    args.output.write_text(json.dumps({"private_key": base64.b64encode(raw).decode(), "public_key": base64.b64encode(pub).decode()}), encoding="utf-8")
+    args.output.write_text(json.dumps({
+        "private_key": base64.b64encode(raw).decode(),
+        "private_key_hex": raw.hex(),
+        "public_key": base64.b64encode(pub).decode(),
+    }), encoding="utf-8")
     try: os.chmod(args.output, 0o600)
     except OSError: pass
     response = httpx.post(f"{args.url}/api/devices", json={"id": args.device, "worker_id": args.worker, "public_key": base64.b64encode(pub).decode()}, headers={"X-API-Key": os.getenv("TRUSTTIER_API_KEY", "")}, timeout=20)

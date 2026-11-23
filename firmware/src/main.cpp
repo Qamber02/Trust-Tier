@@ -2,18 +2,24 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
-#include <Wire.h>
-#include <Adafruit_PN532.h>
+#include <SPI.h>
+#include <MFRC522.h>
+#include <ThreeWire.h>
+#include <RtcDS1302.h>
 #include <ArduinoJson.h>
 #include <mbedtls/sha256.h>
 #include <Ed25519.h>
+#include "pins.h"
 #include "secrets.h"
 
-// PN532 I2C: SDA=21, SCL=22; IRQ=4, RESET=5. RTC is the ESP32's battery-backed
-// system clock (synchronize with NTP when online). Optional MPU6050 uses I2C bus.
-Adafruit_PN532 nfc(4, 5);
+MFRC522 rfid(PIN_SS, PIN_RFID_RST);
+ThreeWire ds1302Wire(PIN_DS1302_DAT, PIN_DS1302_CLK, PIN_DS1302_RST);
+RtcDS1302<ThreeWire> rtc(ds1302Wire);
 const char *LOG_PATH = "/events.jsonl";
+const char *CHAIN_PATH = "/chain.hash";
 String tailHash;
+uint8_t nextStep = 0;
+const char *eventTypes[] = {"arrive", "start", "finish"};
 
 String hex(const uint8_t *p, size_t n) {
   const char *digits = "0123456789abcdef"; String out; out.reserve(n * 2);
@@ -24,10 +30,12 @@ String b64(const uint8_t *p, size_t n) {
   static const char *t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   String out; for(size_t i=0;i<n;i+=3){uint32_t v=(uint32_t)p[i]<<16;if(i+1<n)v|=(uint32_t)p[i+1]<<8;if(i+2<n)v|=p[i+2];out+=t[(v>>18)&63];out+=t[(v>>12)&63];out+=(i+1<n)?t[(v>>6)&63]:'=';out+=(i+2<n)?t[v&63]:'=';} return out;
 }
-String eventType="arrive";
 String timestampUtc() {
-  time_t now=time(nullptr); struct tm value; gmtime_r(&now,&value); char out[25];
-  strftime(out,sizeof(out),"%Y-%m-%dT%H:%M:%SZ",&value); return String(out);
+  const RtcDateTime now = rtc.GetDateTime();
+  char out[25];
+  snprintf(out, sizeof(out), "%04u-%02u-%02uT%02u:%02u:%02uZ",
+           now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second());
+  return String(out);
 }
 String canonical(String id, String type, String tier, String ts, String prev) {
   // Sorted keys, matching tools/badge_simulator.py / trusttier_live.py canonical JSON.
@@ -44,7 +52,15 @@ bool appendEvent(String type, String tier) {
   uint8_t sig[64]; Ed25519::sign(sig,(const uint8_t*)hash.c_str(),hash.length(),privateKey);
   JsonDocument doc; deserializeJson(doc,body); doc["hash"]=hash; doc["signature"]=b64(sig,sizeof(sig));
   String line; serializeJson(doc,line); File file=LittleFS.open(LOG_PATH,"a"); if(!file)return false;
-  file.println(line); file.close(); tailHash=hash; Serial.println("Buffered signed event: "+line); return true;
+  file.println(line); file.close(); tailHash=hash;
+  File chain=LittleFS.open(CHAIN_PATH,"w"); if(chain){chain.print(tailHash);chain.close();}
+  return true;
+}
+bool readTag() {
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return false;
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
+  return true;
 }
 void syncLog() {
   if(WiFi.status()!=WL_CONNECTED || !LittleFS.exists(LOG_PATH)) return;
@@ -53,18 +69,26 @@ void syncLog() {
   if(first)return;
   HTTPClient http; http.begin(String(TRUSTTIER_API)+"/api/sync"); http.addHeader("Content-Type","application/json"); http.addHeader("X-API-Key",TRUSTTIER_API_KEY);
   String request="{\"events\":"+batch+"}"; int status=http.POST(request);
-  if(status>=200 && status<300){LittleFS.remove(LOG_PATH);Serial.println("Synced; server acknowledged batch.");}else Serial.printf("Sync deferred (HTTP %d); will retry.\n",status);
+  if(status>=200 && status<300){LittleFS.remove(LOG_PATH);}
   http.end();
 }
 void setup(){
-  Serial.begin(115200); Wire.begin(21,22); if(!LittleFS.begin(true)){Serial.println("LittleFS mount failed");return;}
-  nfc.begin(); nfc.SAMConfig(); WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
-  Serial.println("TrustTier badge ready; waiting for NFC / network...");
+  SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI, PIN_SS);
+  rfid.PCD_Init();
+  rtc.Begin();
+  if (!rtc.IsDateTimeValid()) rtc.SetDateTime(RtcDateTime(__DATE__, __TIME__));
+  if(!LittleFS.begin(true)) return;
+  if (LittleFS.exists(CHAIN_PATH)) {
+    File chain=LittleFS.open(CHAIN_PATH,"r");
+    if(chain){tailHash=chain.readString();tailHash.trim();chain.close();}
+  }
+  WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
 }
 void loop(){
-  uint8_t uid[7]; uint8_t uidLength;
-  if(nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A,uid,&uidLength,100)){
-    appendEvent("arrive","nfc"); delay(1200);
+  if(readTag()){
+    const String tier = nextStep == 0 ? "nfc" : "signed";
+    if (appendEvent(eventTypes[nextStep], tier)) nextStep = (nextStep + 1) % 3;
+    delay(1200);
   }
   if(WiFi.status()==WL_CONNECTED) syncLog();
   delay(100);

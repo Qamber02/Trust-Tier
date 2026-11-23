@@ -104,8 +104,26 @@ The original model dashboard remains available at `/legacy`. The root URL now se
 4. Test live sync locally: `python tools/provision_badge.py --device DEMO-ESP32-001 --worker RDR-025`, then `python tools/badge_simulator.py --offline --tampered`. The simulator keeps its private key in an ignored local file.
 5. Generate up to one million synthetic rows with `python tools/generate_live_data.py --events 1000000`; run the graph benchmark with `python tools/benchmark_graph.py` (SQLite emulates indexed relational and recursive traversal; it is not a hosted Supabase latency claim).
 6. For each Flutter project: `flutter pub get`, then `flutter run --dart-define=TRUSTTIER_API_URL=http://10.0.2.2:8000 --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`. Use your host LAN IP on physical phones. Service role credentials are never passed to Flutter.
-7. Firmware is under `firmware/`; copy `include/secrets.example.h` to `include/secrets.h`, provision each device key and flash with PlatformIO. Hardware wiring: PN532 I²C SDA→GPIO21, SCL→GPIO22, IRQ→GPIO4, RESET→GPIO5; optional MPU6050 shares SDA/SCL. The simulator provides the currently testable signing and offline-batch workflow.
+7. Firmware is under `firmware/`. Use Arduino IDE with ESP32 core 3.3.12 and the MFRC522 (GithubCommunity), Rtc (Makuna), ThreeWire, ArduinoJson, and Crypto libraries. Copy `firmware/include/secrets.example.h` to `firmware/include/secrets.h`; provision a device key before flashing. All GPIO constants live in `firmware/include/pins.h`.
+
+#### Fixed badge wiring — ESP32-WROOM-32 DevKit (30-pin, HW-463)
+
+On this board the printed D label is the GPIO number. RC522 `SDA` is its SPI `SS/CS` pin. The firmware calls `SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI, PIN_SS)` and uses only the constants in `pins.h`; no I²C devices or USB-serial GPIOs are used.
+
+```text
+RC522 RFID (SPI)             DS1302 RTC (3-wire; no I²C)
+SDA / SS / CS → GPIO 5       CLK → GPIO 27
+SCK           → GPIO 18      DAT → GPIO 26
+MOSI          → GPIO 23      RST → GPIO 25
+MISO          → GPIO 19      VCC → 3V3
+RST           → GPIO 22      GND → GND
+3.3V → 3V3
+GND  → GND
+IRQ  → not connected
+```
+
+The simulator provides the currently testable signed-event and offline-batch workflow; firmware still requires compilation and physical-board validation.
 
 ### Integration status and limitations
 
-The FastAPI ingestion verifies Ed25519 signatures and SHA-256 event chaining, rejects duplicates, updates Bayesian tier scores, and writes to Supabase when configured. Rejected events are retained by the local demo API. The live browser dashboard uses the public anon key only. Flutter apps retain their existing mock Store for offline fallback; `TrustTierService` exposes API actions and Supabase listeners, while existing screens still need product-specific account-to-worker/client identity wiring. No real Supabase credentials or physical badge are included. The PlatformIO firmware sketch is a hardware integration starting point and must be compiled/validated against the selected ESP32 board, cryptography library and PN532 module before field use; do not treat it as production firmware.
+The FastAPI ingestion verifies Ed25519 signatures and SHA-256 event chaining, rejects duplicates, updates Bayesian tier scores, and writes to Supabase when configured. Rejected events are retained by the local demo API. The live browser dashboard uses the public anon key only. Flutter apps retain their existing mock Store for offline fallback; `TrustTierService` exposes API actions and Supabase listeners. Customer and rider trust-score views now subscribe to Supabase Realtime when configured. Apply database migrations before running the live path. Firmware has not been compiled or tested on physical hardware; validate it with the specified board and modules before field use.
