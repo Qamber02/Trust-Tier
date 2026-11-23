@@ -93,3 +93,19 @@ Open your browser:
 
 ## 📄 License
 MIT License. Built for course research on Advanced Distributed and Mobile Systems (ADMS).
+
+## Connected demo (FastAPI, Supabase, dashboard, apps, badge)
+
+The original model dashboard remains available at `/legacy`. The root URL now serves the live operations dashboard (`static/live.html`), which subscribes to Supabase Realtime when configured and otherwise refreshes the local API demo every two seconds.
+
+1. Install Python dependencies: `python -m pip install -r requirements.txt`.
+2. Copy `.env.example` to `.env`; configure Supabase URL, anon key and **server-only** service role key. Apply `supabase/migrations/202611230001_initial_trusttier.sql` in the Supabase SQL editor. Never put the service role key in a Flutter app or browser.
+3. Start the API: `uvicorn ui_server:app --host 0.0.0.0 --port 8000`. Seed workers and clients with `python tools/seed_supabase.py` (requires Supabase credentials).
+4. Test live sync locally: `python tools/provision_badge.py --device DEMO-ESP32-001 --worker RDR-025`, then `python tools/badge_simulator.py --offline --tampered`. The simulator keeps its private key in an ignored local file.
+5. Generate up to one million synthetic rows with `python tools/generate_live_data.py --events 1000000`; run the graph benchmark with `python tools/benchmark_graph.py` (SQLite emulates indexed relational and recursive traversal; it is not a hosted Supabase latency claim).
+6. For each Flutter project: `flutter pub get`, then `flutter run --dart-define=TRUSTTIER_API_URL=http://10.0.2.2:8000 --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`. Use your host LAN IP on physical phones. Service role credentials are never passed to Flutter.
+7. Firmware is under `firmware/`; copy `include/secrets.example.h` to `include/secrets.h`, provision each device key and flash with PlatformIO. Hardware wiring: PN532 I²C SDA→GPIO21, SCL→GPIO22, IRQ→GPIO4, RESET→GPIO5; optional MPU6050 shares SDA/SCL. The simulator provides the currently testable signing and offline-batch workflow.
+
+### Integration status and limitations
+
+The FastAPI ingestion verifies Ed25519 signatures and SHA-256 event chaining, rejects duplicates, updates Bayesian tier scores, and writes to Supabase when configured. Rejected events are retained by the local demo API. The live browser dashboard uses the public anon key only. Flutter apps retain their existing mock Store for offline fallback; `TrustTierService` exposes API actions and Supabase listeners, while existing screens still need product-specific account-to-worker/client identity wiring. No real Supabase credentials or physical badge are included. The PlatformIO firmware sketch is a hardware integration starting point and must be compiled/validated against the selected ESP32 board, cryptography library and PN532 module before field use; do not treat it as production firmware.

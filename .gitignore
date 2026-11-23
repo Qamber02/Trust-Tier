@@ -5,3 +5,12 @@ __pycache__/
 .idea/
 .DS_Store
 *.log
+
+# Local credentials, device secrets, and generated benchmark outputs
+.env
+.badge-demo-key.json
+badge-private-key.json
+firmware/include/secrets.h
+*.png
+graph_benchmark.csv
+trusttier_live_events.csv

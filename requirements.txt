@@ -9,3 +9,4 @@ httpx2>=0.1
 cryptography>=43,<46
 supabase>=2.10,<3
 pytest>=8,<9
+matplotlib>=3.8,<4
