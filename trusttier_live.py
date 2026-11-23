@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -25,6 +25,7 @@ _history: list[dict[str, Any]] = []
 _disputes: list[dict[str, Any]] = []
 _reviews: list[dict[str, Any]] = []
 _jobs: dict[str, dict[str, Any]] = {}
+_job_activity: list[dict[str, Any]] = []
 
 PRIOR = float(os.getenv("TRUSTTIER_PRIOR", "0.6209"))
 LIKELIHOOD = {
@@ -72,6 +73,17 @@ class JobCreate(BaseModel):
     client_id: str
     title: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=500)
+
+
+class RiderJobAction(BaseModel):
+    worker_id: str
+    action: str
+
+
+class CustomerConfirmation(BaseModel):
+    client_id: str
+    stars: int = Field(ge=1, le=5)
+    body: str = Field(default="", max_length=2000)
 
 
 class ReviewCreate(BaseModel):
@@ -141,6 +153,19 @@ def _read(table: str, order: str | None = None) -> list[dict[str, Any]]:
             query = query.order(order, desc=True)
         return query.limit(500).execute().data or []
     return []
+
+
+def _log_job_activity(job_id: str, actor_role: str, actor_id: str,
+                      action: str, details: dict[str, Any] | None = None) -> None:
+    row = {"job_id": job_id, "actor_role": actor_role, "actor_id": actor_id,
+           "action": action, "details": details or {},
+           "created_at": datetime.now(timezone.utc).isoformat()}
+    _job_activity.append(row)
+    try:
+        _insert("job_activity", row)
+    except Exception:
+        # Keeps the API demo usable until migration 003 has been applied.
+        pass
 
 
 def register_device(reg: DeviceRegistration) -> None:
@@ -324,8 +349,27 @@ def clients():
 
 
 @router.get("/jobs")
-def jobs():
-    return list(_jobs.values()) or _read("jobs", "created_at")
+def jobs(worker_id: str | None = None, status: str | None = None,
+         client_id: str | None = None,
+         limit: int = Query(default=100, ge=1, le=500)):
+    client = _client()
+    if client:
+        query = client.table("jobs").select("*").order("updated_at", desc=True).limit(limit)
+        if worker_id:
+            query = query.eq("worker_id", worker_id)
+        if status:
+            query = query.eq("status", status)
+        if client_id:
+            query = query.eq("client_id", client_id)
+        return query.execute().data or []
+    rows = list(_jobs.values())
+    if worker_id:
+        rows = [row for row in rows if row.get("worker_id") == worker_id]
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    if client_id:
+        rows = [row for row in rows if row.get("client_id") == client_id]
+    return rows[:limit]
 
 
 @router.post("/jobs")
@@ -336,7 +380,101 @@ def create_job(job: JobCreate):
     row["status"] = "requested"
     _jobs[row["id"]] = row
     _insert("jobs", row)
+    _log_job_activity(row["id"], "customer", row["client_id"], "requested")
     return row
+
+
+@router.post("/jobs/{job_id}/actions")
+def rider_job_action(job_id: str, action: RiderJobAction):
+    allowed = {"accepted", "arrived", "started", "finished", "declined"}
+    if action.action not in allowed:
+        raise HTTPException(422, f"action must be one of {sorted(allowed)}")
+    client = _client()
+    if client:
+        found = client.table("jobs").select("*").eq("id", job_id).limit(1).execute().data
+        if not found:
+            raise HTTPException(404, "job not found")
+        row = found[0]
+        if row["worker_id"] != action.worker_id:
+            raise HTTPException(403, "job is assigned to another worker")
+    else:
+        row = _jobs.get(job_id)
+        if not row:
+            raise HTTPException(404, "job not found")
+        if row.get("worker_id") != action.worker_id:
+            raise HTTPException(403, "job is assigned to another worker")
+
+    if action.action in {"accepted", "declined"} and row["status"] != "requested":
+        raise HTTPException(409, "only a waiting request can be accepted or declined")
+    status = ("cancelled" if action.action == "declined" else
+              "in_progress" if action.action in {"accepted", "arrived", "started"} else
+              "awaiting_confirm")
+    row.update(status=status, updated_at=datetime.now(timezone.utc).isoformat(),
+               last_rider_action=action.action)
+    # Job status is persisted; the action label is response metadata, not badge proof.
+    if client:
+        client.table("jobs").update({"status": status, "updated_at": row["updated_at"]}).eq("id", job_id).execute()
+    _jobs[job_id] = row
+    _log_job_activity(job_id, "rider", action.worker_id, action.action)
+    return row
+
+
+@router.post("/jobs/{job_id}/confirm")
+def confirm_job(job_id: str, confirmation: CustomerConfirmation):
+    client = _client()
+    if client:
+        found = client.table("jobs").select("*").eq("id", job_id).limit(1).execute().data
+        if not found:
+            raise HTTPException(404, "job not found")
+        job = found[0]
+    else:
+        job = _jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "job not found")
+    if job["client_id"] != confirmation.client_id:
+        raise HTTPException(403, "job belongs to another customer")
+    if job["status"] != "awaiting_confirm":
+        raise HTTPException(409, "rider must mark the delivery finished before confirmation")
+    review = {"job_id": job_id, "worker_id": job["worker_id"],
+              "client_id": confirmation.client_id, "stars": confirmation.stars,
+              "body": confirmation.body,
+              "sentiment": 1.0 if confirmation.stars >= 4 else (-1.0 if confirmation.stars <= 2 else 0.0)}
+    try:
+        _insert("reviews", review)
+        _reviews.append(review)
+        job.update(status="completed", updated_at=datetime.now(timezone.utc).isoformat())
+        if client:
+            client.table("jobs").update({"status": "completed", "updated_at": job["updated_at"]}).eq("id", job_id).execute()
+        _jobs[job_id] = job
+        _log_job_activity(job_id, "customer", confirmation.client_id, "confirmed",
+                          {"stars": confirmation.stars, "body": confirmation.body})
+    except Exception as exc:
+        raise HTTPException(409, "confirmation could not be saved; check for an existing review") from exc
+    return {"confirmed": True, "job": job, "review": review}
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel_job(job_id: str, client_id: str = Query(...)):
+    client = _client()
+    if client:
+        found = client.table("jobs").select("*").eq("id", job_id).limit(1).execute().data
+        if not found:
+            raise HTTPException(404, "job not found")
+        job = found[0]
+    else:
+        job = _jobs.get(job_id)
+        if not job:
+            raise HTTPException(404, "job not found")
+    if job["client_id"] != client_id:
+        raise HTTPException(403, "job belongs to another customer")
+    if job["status"] != "requested":
+        raise HTTPException(409, "only a waiting request can be cancelled")
+    job.update(status="cancelled", updated_at=datetime.now(timezone.utc).isoformat())
+    if client:
+        client.table("jobs").update({"status": "cancelled", "updated_at": job["updated_at"]}).eq("id", job_id).execute()
+    _jobs[job_id] = job
+    _log_job_activity(job_id, "customer", client_id, "cancelled")
+    return job
 
 
 @router.post("/reviews")
@@ -357,9 +495,38 @@ def reviews():
 def create_dispute(dispute: DisputeCreate):
     row = dispute.model_dump()
     row["status"] = "open"
+    client = _client()
+    if client:
+        found = client.table("jobs").select("worker_id,client_id").eq("id", row["job_id"]).limit(1).execute().data
+        if not found:
+            raise HTTPException(404, "job not found")
+        if found[0]["client_id"] != row["client_id"] or found[0]["worker_id"] != row["worker_id"]:
+            raise HTTPException(403, "dispute parties do not match the job")
+    elif row["job_id"] in _jobs:
+        job = _jobs[row["job_id"]]
+        if job["client_id"] != row["client_id"] or job["worker_id"] != row["worker_id"]:
+            raise HTTPException(403, "dispute parties do not match the job")
     _disputes.append(row)
     _insert("disputes", row)
+    if client:
+        client.table("jobs").update({"status": "disputed", "updated_at": datetime.now(timezone.utc).isoformat()}).eq("id", row["job_id"]).execute()
+    if row["job_id"] in _jobs:
+        _jobs[row["job_id"]].update(status="disputed", updated_at=datetime.now(timezone.utc).isoformat())
+    _log_job_activity(row["job_id"], "customer", row["client_id"], "disputed",
+                      {"reason": row["reason"]})
     return row
+
+
+@router.get("/job-activity")
+def job_activity(limit: int = Query(default=100, ge=1, le=500)):
+    client = _client()
+    if client:
+        try:
+            return client.table("job_activity").select("*").order(
+                "created_at", desc=True).limit(limit).execute().data or []
+        except Exception:
+            pass
+    return list(reversed(_job_activity[-limit:]))
 
 
 @router.get("/disputes")

@@ -6,11 +6,13 @@ import os
 from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", required=True)
     parser.add_argument("--worker", required=True)

@@ -41,3 +41,26 @@ def test_tampered_payload_is_retained_as_rejected(monkeypatch):
     assert result["rejected"] == 1
     assert "hash mismatch" in result["results"][0]["reason"]
     assert live._events[event["id"]]["verified"] is False
+
+
+def test_rider_workflow_and_customer_confirmation_are_separate(monkeypatch):
+    monkeypatch.setattr(live, "_client", lambda: None)
+    live._jobs.clear()
+    live._job_activity.clear()
+    job = live.create_job(live.JobCreate(
+        worker_id="RDR-TEST", client_id="CLT-TEST",
+        title="Separate rider and customer workflow", address="Test street"))
+
+    for action in ("accepted", "arrived", "started", "finished"):
+        live.rider_job_action(job["id"], live.RiderJobAction(
+            worker_id="RDR-TEST", action=action))
+
+    assert live._jobs[job["id"]]["status"] == "awaiting_confirm"
+    confirmation = live.confirm_job(job["id"], live.CustomerConfirmation(
+        client_id="CLT-TEST", stars=5, body="Received"))
+    assert confirmation["confirmed"] is True
+    assert live._jobs[job["id"]]["status"] == "completed"
+    assert [row["actor_role"] for row in live._job_activity] == [
+        "customer", "rider", "rider", "rider", "rider", "customer"]
+    assert [row["action"] for row in live._job_activity[-2:]] == [
+        "finished", "confirmed"]

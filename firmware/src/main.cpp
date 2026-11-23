@@ -9,8 +9,8 @@
 #include <ArduinoJson.h>
 #include <mbedtls/sha256.h>
 #include <Ed25519.h>
-#include "pins.h"
-#include "secrets.h"
+#include "../include/pins.h"
+#include "../include/secrets.h"
 
 static_assert(sizeof(DEVICE_PRIVATE_KEY_HEX) == 65,
               "Set the provisioned 32-byte Ed25519 private key as 64 hex characters");
