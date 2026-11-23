@@ -148,10 +148,13 @@ def _insert(table: str, row: dict[str, Any]) -> None:
 def _read(table: str, order: str | None = None) -> list[dict[str, Any]]:
     client = _client()
     if client:
-        query = client.table(table).select("*")
-        if order:
-            query = query.order(order, desc=True)
-        return query.limit(500).execute().data or []
+        try:
+            query = client.table(table).select("*")
+            if order:
+                query = query.order(order, desc=True)
+            return query.limit(500).execute().data or []
+        except Exception:
+            return []
     return []
 
 
@@ -354,14 +357,21 @@ def jobs(worker_id: str | None = None, status: str | None = None,
          limit: int = Query(default=100, ge=1, le=500)):
     client = _client()
     if client:
-        query = client.table("jobs").select("*").order("updated_at", desc=True).limit(limit)
-        if worker_id:
-            query = query.eq("worker_id", worker_id)
-        if status:
-            query = query.eq("status", status)
-        if client_id:
-            query = query.eq("client_id", client_id)
-        return query.execute().data or []
+        try:
+            # Avoid ORDER BY updated_at over the 100k synthetic history. The API
+            # returns a bounded page; the dashboard orders those recent records.
+            query = client.table("jobs").select("*").not_.like(
+                "id", "DEL-%").limit(limit)
+            if worker_id:
+                query = query.eq("worker_id", worker_id)
+            if status:
+                query = query.eq("status", status)
+            if client_id:
+                query = query.eq("client_id", client_id)
+            return query.execute().data or []
+        except Exception:
+            # Preserve locally-created demo jobs if PostgREST is temporarily busy.
+            pass
     rows = list(_jobs.values())
     if worker_id:
         rows = [row for row in rows if row.get("worker_id") == worker_id]

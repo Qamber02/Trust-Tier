@@ -20,6 +20,10 @@ create index if not exists jobs_worker_status_updated_idx
   on public.jobs(worker_id, status, updated_at desc);
 create index if not exists jobs_client_updated_idx
   on public.jobs(client_id, updated_at desc);
+create index if not exists jobs_updated_idx
+  on public.jobs(updated_at desc);
+create index if not exists events_verified_synced_idx
+  on public.events(synced_at desc) where verified = true;
 
 alter table public.job_activity enable row level security;
 create policy job_activity_party_read on public.job_activity for select to authenticated
