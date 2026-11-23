@@ -25,7 +25,7 @@ def make_event(key: Ed25519PrivateKey, device_id: str, worker_id: str, job_id: s
     body = {
         "id": str(uuid.uuid4()), "device_id": device_id, "worker_id": worker_id,
         "job_id": job_id, "client_id": "CLT-0350", "type": event_type,
-        "evidence_tier": tier, "device_ts": datetime.now(timezone.utc).isoformat(),
+        "evidence_tier": tier, "device_ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "payload": {"client_confirmation": True, "demo": True}, "prev_hash": previous_hash,
     }
     digest = hashlib.sha256(previous_hash.encode() + canonical(body)).hexdigest()

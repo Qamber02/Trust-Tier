@@ -22,12 +22,16 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from trusttier_live import router as live_router
+from trusttier_live import api_register_device, api_sync, router as live_router
 
 # Unpickling compatibility bridge for Kaggle-trained scikit-learn models
 try:
     import sklearn._loss._loss
-    sys.modules['_loss'] = sklearn._loss._loss
+    import sklearn._loss
+    # Older Kaggle artifacts reference `_loss._loss`; expose both package levels.
+    sklearn._loss.CyHalfBinomialLoss = sklearn._loss._loss.CyHalfBinomialLoss
+    sys.modules['_loss'] = sklearn._loss
+    sys.modules['_loss._loss'] = sklearn._loss._loss
 except ImportError:
     pass
 
@@ -46,6 +50,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(live_router)
+app.add_api_route("/sync", api_sync, methods=["POST"], include_in_schema=True)
+app.add_api_route("/devices", api_register_device, methods=["POST"], include_in_schema=True)
 
 # Load data and trained models
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -423,7 +429,7 @@ def compute_prediction_pipeline(data: Dict[str, Any]) -> Dict[str, Any]:
 # API Endpoints
 @app.post("/api/predict")
 async def api_predict(delivery: DeliveryInput):
-    return compute_prediction_pipeline(delivery.dict())
+    return compute_prediction_pipeline(delivery.model_dump())
 
 
 @app.get("/api/scenarios")

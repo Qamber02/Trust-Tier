@@ -11,10 +11,14 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter(prefix="/api")
 _lock = threading.RLock()
 _events: dict[str, dict[str, Any]] = {}
+_rejections: list[dict[str, Any]] = []
 _devices: dict[str, dict[str, Any]] = {}
 _scores: dict[str, dict[str, Any]] = {}
 _history: list[dict[str, Any]] = []
@@ -154,10 +158,15 @@ def register_device(reg: DeviceRegistration) -> None:
 
 
 def _apply_score(worker_id: str, event: dict[str, Any]) -> tuple[float, float]:
-    old = _scores.get(worker_id, {"worker_id": worker_id, "score": PRIOR, "evidence_counts": {"self": 0, "nfc": 0, "signed": 0}})
+    old = _scores.get(worker_id)
+    if old is None:
+        client = _client()
+        if client:
+            found = client.table("trust_scores").select("*").eq("worker_id", worker_id).limit(1).execute().data
+            old = found[0] if found else None
+    old = old or {"worker_id": worker_id, "score": PRIOR, "evidence_counts": {"self": 0, "nfc": 0, "signed": 0}}
     previous = float(old["score"])
-    prior_odds = PRIOR / (1 - PRIOR)
-    posterior_odds = prior_odds * LIKELIHOOD[event["evidence_tier"]]
+    posterior_odds = (previous / (1 - previous)) * LIKELIHOOD[event["evidence_tier"]]
     score = posterior_odds / (1 + posterior_odds)
     counts = dict(old.get("evidence_counts", {}))
     counts[event["evidence_tier"]] = int(counts.get(event["evidence_tier"], 0)) + 1
@@ -168,6 +177,35 @@ def _apply_score(worker_id: str, event: dict[str, Any]) -> tuple[float, float]:
     _save("trust_scores", updated)
     _insert("trust_score_history", history)
     return previous, score
+
+
+def _propagate_to_neighbors(worker_id: str, client_id: str | None, before: float, after: float, event: dict[str, Any]) -> None:
+    """Propagate a decayed fraction of a worker's log-odds change across shared-client edges."""
+    if not client_id:
+        return
+    import math
+    delta = math.log(after / (1 - after)) - math.log(before / (1 - before))
+    neighbors = {e["worker_id"] for e in _events.values()
+                 if e.get("verified") and e.get("client_id") == client_id
+                 and e.get("worker_id") != worker_id}
+    for neighbor in neighbors:
+        row = _scores.get(neighbor, {"worker_id": neighbor, "score": PRIOR,
+                                     "evidence_counts": {"self": 0, "nfc": 0, "signed": 0}})
+        old_score = float(row["score"])
+        log_odds = math.log(old_score / (1 - old_score)) + 0.35 * delta
+        new_score = 1 / (1 + math.exp(-max(-20, min(20, log_odds))))
+        row.update(score=new_score, updated_at=datetime.now(timezone.utc).isoformat())
+        _scores[neighbor] = row
+        history = {"worker_id": neighbor, "event_id": event["id"], "previous_score": old_score,
+                   "score": new_score, "evidence_tier": event["evidence_tier"]}
+        _history.append(history)
+        _save("trust_scores", row)
+        _insert("trust_score_history", history)
+        try:
+            _insert("edges", {"src_id": worker_id, "dst_id": neighbor,
+                              "type": "shared_client", "weight": 0.35})
+        except Exception:
+            pass
 
 
 def sync_events(batch: SyncBatch) -> dict[str, Any]:
@@ -205,6 +243,15 @@ def sync_events(batch: SyncBatch) -> dict[str, Any]:
                 event["verified"] = False
                 event["rejection_reason"] = f"database write failed: {type(exc).__name__}"
                 reason = event["rejection_reason"]
+            if reason:
+                rejection = {"event_id": model.id, "device_id": model.device_id,
+                             "worker_id": model.worker_id, "reason": reason,
+                             "event_payload": event}
+                _rejections.append(rejection)
+                try:
+                    _insert("event_rejections", rejection)
+                except Exception:
+                    pass
             score_change = None
             if reason is None:
                 device["last_hash"] = model.hash
@@ -212,6 +259,7 @@ def sync_events(batch: SyncBatch) -> dict[str, Any]:
                 _devices[model.device_id] = device
                 _save("devices", device)
                 before, after = _apply_score(model.worker_id, event)
+                _propagate_to_neighbors(model.worker_id, model.client_id, before, after, event)
                 score_change = {"before": before, "after": after}
             results.append({"id": model.id, "verified": reason is None, "reason": reason, "score_change": score_change})
     return {"accepted": sum(r["verified"] for r in results), "rejected": sum(not r["verified"] for r in results), "results": results}
@@ -236,7 +284,13 @@ def api_register_device(registration: DeviceRegistration, x_api_key: str | None 
 
 @router.get("/live/events")
 def live_events():
-    return sorted(_events.values(), key=lambda e: e.get("synced_at", ""), reverse=True)[:100] or _read("events", "synced_at")
+    rows = sorted(_events.values(), key=lambda e: e.get("synced_at", ""), reverse=True)[:100]
+    return rows or _read("events", "synced_at")
+
+
+@router.get("/live/rejections")
+def live_rejections():
+    return list(reversed(_rejections[-100:])) or _read("event_rejections", "created_at")
 
 
 @router.get("/workers")
@@ -255,6 +309,13 @@ def trust_scores():
 @router.get("/live/history")
 def live_history():
     return list(reversed(_history[-100:])) or _read("trust_score_history", "created_at")
+
+
+@router.get("/graph")
+def graph_edges():
+    rows = [e for e in _events.values() if e.get("verified") and e.get("client_id")]
+    return [{"src_id": row["worker_id"], "dst_id": row["client_id"], "type": "worker-client", "weight": 1.0}
+            for row in rows[-100:]] or _read("edges")
 
 
 @router.get("/clients")
