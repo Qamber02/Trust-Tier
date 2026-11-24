@@ -35,12 +35,20 @@ An advanced decentralized and cryptographic framework that predicts whether a gi
 ├── generate_dataset.py               # Reproducible generator for 200 riders & 2,500 clients
 ├── verify_dataset.py                 # 10-point automated mathematical validation suite
 ├── trusttier_kaggle_pipeline.py      # End-to-end training & graph belief propagation pipeline
-├── ui_server.py                      # FastAPI real-time inference server (Port 8000)
+├── trusttier_live.py                 # Live Ed25519/hash-chain ingestion, Supabase sync, & comparison APIs
+├── ui_server.py                      # FastAPI real-time inference & operations server (Port 8000)
+├── test_live.py                      # Automated tests for signing, tamper rejection, workflow & comparison
 ├── test_ui.py                        # Automated API testing client
 ├── simple_test_ui.html               # Standalone manual test sandbox (Double-clickable)
 ├── static/
-│   ├── index.html                    # Glassmorphism full analytics dashboard
-│   └── simple.html                   # Interactive manual scenario tester
+│   ├── live.html                     # Live Operations Center + Supabase vs. TrustTier comparison (/)
+│   ├── index.html                    # Glassmorphism full analytics dashboard (/legacy)
+│   └── simple.html                   # Interactive manual scenario tester (/simple)
+├── Trusttier-customer/               # Flutter Customer app (live Supabase workers, job requests & ratings)
+├── Trusttier-rider/                  # Flutter Rider app (live job queue, workflow actions & trust score)
+├── firmware/                         # ESP32-WROOM-32 + RC522 + DS1302 Ed25519 badge firmware (.ino/.cpp)
+├── supabase/migrations/              # Ordered PostgreSQL + RLS migrations for Supabase
+├── tools/                            # Badge provisioning, simulator, Supabase seeder & graph benchmark
 ├── trusttier_v2_models.joblib        # Trained scikit-learn models (107 & 141 Boosted Trees)
 ├── trusttier_v2_rider_scores.csv     # 200-Rider belief scores and cohort rankings
 ├── trusttier_v2_client_weights.csv   # 2,500 Client credibility weights
@@ -96,15 +104,26 @@ MIT License. Built for course research on Advanced Distributed and Mobile System
 
 ## Connected demo (FastAPI, Supabase, dashboard, apps, badge)
 
-The original model dashboard remains available at `/legacy`. The root URL serves the operations dashboard (`static/live.html`): signed ESP32 badge events, rider app job actions, customer confirmations/disputes, and worker trust scores are shown in separate panels. It subscribes to Supabase Realtime when configured and polls the API as a fallback.
+The original model dashboard remains available at `/legacy` and the manual scenario sandbox at `/simple`. The root URL (`/`) serves the Operations Center (`static/live.html`), which displays signed ESP32 badge events, rider app job actions, customer confirmations/disputes, live worker trust scores (enriched with `display_name` and `cohort` from Supabase `workers`), registered hardware badges (`/api/devices`), and a **Supabase (Plain Relational) vs. TrustTier System** comparison section (`/api/comparison`). It subscribes to Supabase Realtime when configured and polls the API as a fallback.
 
 1. Install Python dependencies: `python -m pip install -r requirements.txt`.
-2. Copy `.env.example` to `.env`; configure Supabase URL, anon key and **server-only** service role key. Apply every migration in `supabase/migrations/` in numerical order via the Supabase SQL editor. Enable Supabase Anonymous Sign-Ins for optional read-only score Realtime in demo clients. Never put the service role key in a Flutter app or browser.
-3. Start the API: `uvicorn ui_server:app --host 0.0.0.0 --port 8000`. Seed workers and clients with `python tools/seed_supabase.py` (requires Supabase credentials).
-4. Test live sync locally: `python tools/provision_badge.py --device DEMO-ESP32-001 --worker RDR-025`, then `python tools/badge_simulator.py --offline --tampered`. The simulator keeps its private key in an ignored local file.
+2. Copy `.env.example` to `.env`; configure `TRUSTTIER_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and the **server-only** `SUPABASE_SERVICE_ROLE_KEY`. Apply every migration in `supabase/migrations/` in numerical order via the Supabase SQL editor. Enable Supabase Anonymous Sign-Ins for optional read-only score Realtime in demo clients. Never put the service role key in a Flutter app or browser.
+3. Start the API on all interfaces (so physical devices/tunnels can reach it): `uvicorn ui_server:app --host 0.0.0.0 --port 8000`. Seed workers and clients with `python tools/seed_supabase.py`.
+4. Test live sync locally: `python tools/provision_badge.py --device ESP32-RDR-025 --worker RDR-025`, then run `python tools/badge_simulator.py --offline --tampered` (pass `--job <existing_job_id>` when syncing against Supabase). Run the automated test suite with `python -m pytest -v`.
 5. Generate up to one million synthetic rows with `python tools/generate_live_data.py --events 1000000`; run the graph benchmark with `python tools/benchmark_graph.py` (SQLite emulates indexed relational and recursive traversal; it is not a hosted Supabase latency claim).
-6. For the customer app, run `flutter pub get` then `flutter run --dart-define=TRUSTTIER_API_URL=http://10.0.2.2:8000 --dart-define=TRUSTTIER_CLIENT_ID=CLT-0350 --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`. For the rider app, use the same command with `TRUSTTIER_WORKER_ID=RDR-025` instead of `TRUSTTIER_CLIENT_ID`. `10.0.2.2` is for Android emulators; use `http://127.0.0.1:8000` for desktop/web or your computer's LAN IP for physical phones. Customer requests/confirmations and rider accept/arrive/start/finish actions go to FastAPI; trust-score changes still require verified signed/NFC badge events. Service-role credentials are never passed to Flutter.
-7. Complete Arduino IDE steps, library list, exact wiring, provisioning, and upload instructions are in [`firmware/README.md`](firmware/README.md). The fixed GPIO constants remain in `firmware/include/pins.h`.
+6. **Flutter Mobile Apps (`Trusttier-customer/` and `Trusttier-rider/`)**: Both apps live in this repository and load live workers, trust scores, and job requests directly from FastAPI/Supabase (no hardcoded sample lists).
+   - **Customer app** (`Trusttier-customer/`):
+     ```bash
+     flutter pub get
+     flutter build apk --release \
+       --dart-define=TRUSTTIER_API_URL=https://<YOUR-TUNNEL-OR-LAN-URL> \
+       --dart-define=TRUSTTIER_CLIENT_ID=CLT-0350 \
+       --dart-define=SUPABASE_URL=<YOUR_SUPABASE_URL> \
+       --dart-define=SUPABASE_ANON_KEY=<YOUR_SUPABASE_ANON_KEY>
+     ```
+   - **Rider app** (`Trusttier-rider/`): same command with `--dart-define=TRUSTTIER_WORKER_ID=RDR-025` instead of `TRUSTTIER_CLIENT_ID`.
+   - For Android emulators use `http://10.0.2.2:8000`; for USB-connected phones you can use `adb reverse tcp:8000 tcp:8000` with `http://127.0.0.1:8000`, or expose port `8000` over HTTPS (e.g., Pinggy: `ssh -p 443 -R0:127.0.0.1:8000 a.pinggy.io`). Customer requests/confirmations and rider accept/arrive/start/finish actions go to FastAPI; trust-score changes still require verified signed/NFC badge events. Service-role credentials are never passed to Flutter.
+7. Complete Arduino IDE steps, library list, exact wiring, provisioning, and upload instructions are in [`firmware/README.md`](firmware/README.md). The fixed GPIO constants remain in `firmware/include/pins.h`, and `firmware/src/main.cpp` uses Rhys Weatherley's `Crypto` `Ed25519::sign` (5-argument API with derived public key) and `sha256(prev_hash + canonical_body)` chaining matching `trusttier_live.py`.
 
 #### Fixed badge wiring — ESP32-WROOM-32 DevKit (30-pin, HW-463)
 
