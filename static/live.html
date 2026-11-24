@@ -14,6 +14,10 @@
     .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:17px}.metric,.panel{background:linear-gradient(145deg,#121f31,#0e1928);border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}.metric{padding:17px 18px}.metric-label{color:var(--muted);font-size:12px}.metric-value{font-size:29px;font-weight:760;letter-spacing:-.04em;margin-top:7px;font-variant-numeric:tabular-nums}.metric-foot{color:#748aa4;font-size:11px;margin-top:2px}.metric .accent{color:var(--teal)}.metric .warn{color:var(--amber)}.metric .bad{color:var(--red)}
     .grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.85fr);gap:16px}.panel{padding:18px;min-width:0}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}.panel-title{margin:0;font-size:15px;font-weight:730;letter-spacing:-.01em}.panel-sub{margin:3px 0 0;color:var(--muted);font-size:12px}.section-tag{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 8px;white-space:nowrap}.feed{display:flex;flex-direction:column;max-height:430px;overflow:auto}.row{display:grid;grid-template-columns:33px minmax(0,1fr) auto;gap:11px;align-items:start;padding:12px 1px;border-top:1px solid #1d2c40}.row:first-child{border-top:0}.icon{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;background:#1b3045;color:var(--blue);font-weight:800}.icon.rider{background:#2a2730;color:var(--amber)}.icon.customer{background:#18312f;color:var(--teal)}.row-title{font-weight:650;overflow-wrap:anywhere}.row-meta{color:var(--muted);font-size:11px;margin-top:2px}.pill{font-size:10px;line-height:1;border-radius:999px;padding:6px 8px;border:1px solid #345147;color:var(--green);white-space:nowrap}.pill.pending{border-color:#5a4828;color:var(--amber)}.pill.rejected,.pill.disputed{border-color:#60313b;color:var(--red)}.pill.customer{border-color:#28564f;color:var(--teal)}.empty{color:var(--muted);padding:22px 5px;text-align:center;border-top:1px solid #1d2c40}
     .wide{grid-column:1/-1}.workers{max-height:430px;overflow:auto}.worker-row{display:grid;grid-template-columns:36px minmax(75px,.6fr) minmax(90px,1fr) 48px;gap:11px;align-items:center;padding:9px 2px;border-top:1px solid #1d2c40}.avatar{height:32px;width:32px;border-radius:10px;background:#1c3348;color:#acd5ff;display:grid;place-items:center;font-size:10px;font-weight:800}.worker-id{font-weight:650}.worker-meta{font-size:10px;color:var(--muted)}.bar{height:6px;border-radius:99px;background:#1c2b3f;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#27b99d,#80dfb6);border-radius:99px}.worker-score{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}.search{width:min(240px,42vw);border:1px solid var(--line);border-radius:10px;background:#0c1726;color:var(--text);padding:8px 10px;outline:none}.search:focus{border-color:#397c99}.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}.error{color:var(--red);font-size:12px}.footer{color:#71859d;font-size:11px;text-align:center;margin-top:20px}
+    .nav-pills{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.nav-pill{color:var(--muted);text-decoration:none;font-size:12px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#0e1928;transition:border-color .15s,color .15s}.nav-pill:hover,.nav-pill.active{color:var(--text);border-color:var(--teal)}
+    .comp-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}.comp-table th,.comp-table td{text-align:left;padding:10px 10px;border-top:1px solid #1d2c40;vertical-align:top}.comp-table th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;border-top:0}.comp-dim{font-weight:650;color:var(--text);width:24%}.comp-sb{color:#c9d6e8;width:38%}.comp-tt{color:var(--teal);font-weight:550;width:38%}
+    .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.chip{font-size:11px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#0c1726;color:var(--muted)}.chip strong{color:var(--text)}
+    .delta-pos{color:var(--teal);font-weight:700}.delta-neg{color:var(--red);font-weight:700}
     @media(max-width:850px){.shell{padding:18px 15px 34px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.hero{align-items:start;flex-direction:column}.api-note{text-align:left}.split{grid-template-columns:1fr}}
     @media(max-width:480px){.topbar{align-items:flex-start}.top-actions{align-items:flex-end;flex-direction:column;gap:6px}.metric{padding:14px}.metric-value{font-size:25px}.worker-row{grid-template-columns:32px 76px minmax(60px,1fr) 42px;gap:7px}.section-tag{display:none}}
   </style>
@@ -22,6 +26,11 @@
 <main class="shell">
   <header class="topbar">
     <div class="brand"><div class="mark">T</div><div><div class="eyebrow">TrustTier</div><div class="brand-name">Operations Center</div></div></div>
+    <nav class="nav-pills" aria-label="Views">
+      <a class="nav-pill active" href="/">Operations</a>
+      <a class="nav-pill" href="/simple">Manual Sandbox</a>
+      <a class="nav-pill" href="/legacy">Analytics &amp; Benchmarks</a>
+    </nav>
     <div class="top-actions"><div id="connection" class="status">Connecting to API</div><div id="clock" class="clock"></div></div>
   </header>
   <section class="hero"><div><div class="eyebrow">Live service overview</div><h1>Delivery activity, clearly separated.</h1><p>Signed badge proof, rider workflow actions, and customer decisions have independent feeds.</p></div><div class="api-note">Updates automatically · service credentials remain server-side</div></section>
@@ -52,6 +61,32 @@
       <div class="panel-head"><div><h2 class="panel-title">Customer feedback and disputes</h2><p class="panel-sub">Customer-authored responses remain distinct from badge evidence.</p></div></div>
       <div class="split"><div><div class="eyebrow">Reviews</div><div id="reviews" class="feed"></div></div><div><div class="eyebrow">Disputes</div><div id="disputes" class="feed"></div></div></div>
     </article>
+    <article class="panel wide" id="comparison-panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Supabase (Plain Relational) vs. TrustTier System</h2>
+          <p class="panel-sub">Why cryptographic hardware badges, Bayesian tiers, and bipartite graph belief propagation outperform plain Supabase flat ratings and SQL joins.</p>
+        </div>
+        <span class="section-tag">Architecture &amp; Benchmark</span>
+      </div>
+      <div id="device-chips" class="chip-row"><span class="chip">Loading registered ESP32 badges…</span></div>
+      <div class="split">
+        <div>
+          <div class="eyebrow">System Architecture &amp; Benchmark Comparison</div>
+          <table class="comp-table">
+            <thead><tr><th>Dimension</th><th>Plain Supabase (Flat / SQL)</th><th>TrustTier System</th></tr></thead>
+            <tbody id="comparison-rows"><tr><td colspan="3" class="empty">Loading comparison…</td></tr></tbody>
+          </table>
+        </div>
+        <div>
+          <div class="eyebrow">Live Score Comparison (Flat Rating vs. TrustTier)</div>
+          <table class="comp-table">
+            <thead><tr><th>Worker</th><th>Supabase Flat</th><th>TrustTier Score</th><th>Delta</th><th>Proof</th></tr></thead>
+            <tbody id="comparison-deltas"><tr><td colspan="5" class="empty">Loading live score deltas…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </article>
   </section>
   <footer class="footer">TrustTier operations · badge events are evidence; app workflow and customer responses are separate records.</footer>
 </main>
@@ -68,7 +103,7 @@ function riderHtml(row){const status=row.action==='finished'||row.status==='awai
 function customerHtml(row){const disputed=row.action==='disputed'||row.type==='dispute';const label=disputed?'Reported a problem':'Confirmed delivery';const detail=row.details?.stars?` · ${row.details.stars}★`:row.stars?` · ${row.stars}★`:'';return `<div class="row"><div class="icon customer">C</div><div><div class="row-title">${safe(label)}${detail}</div><div class="row-meta">${safe(row.actor_id||row.client_id||row.client||'Customer')} · ${safe(row.job_title||row.job_id||'Job')} · ${stamp(row.created_at)}</div>${row.details?.body?`<div class="row-meta">${safe(row.details.body)}</div>`:''}${row.reason?`<div class="row-meta">${safe(row.reason)}</div>`:''}</div><span class="pill ${disputed?'disputed':'customer'}">${disputed?'DISPUTED':'CONFIRMED'}</span></div>`}
 function renderWorkers(){const query=$('#worker-search').value.trim().toLowerCase();const rows=cachedWorkers.filter(row=>String(row.worker_id).toLowerCase().includes(query)).sort((a,b)=>b.score-a.score);$('#workers').innerHTML=rows.slice(0,100).map(row=>{const score=Math.max(0,Math.min(100,Number(row.score)*100||0));return `<div class="worker-row"><div class="avatar">${safe(String(row.worker_id||'').replace('RDR-',''))}</div><div><div class="worker-id">${safe(row.worker_id)}</div><div class="worker-meta">${Number(row.evidence_counts?.signed||0)} signed · ${Number(row.evidence_counts?.nfc||0)} NFC</div></div><div class="bar"><i style="width:${score}%"></i></div><div class="worker-score">${score.toFixed(1)}%</div></div>`}).join('')||empty('No workers match this search.')}
 async function get(path){const response=await fetch(`${api}/${path}`);if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response.json()}
-async function load(){try{const [events,workers,activities,jobs,reviews,disputes,rejections]=await Promise.all([get('live/events'),get('trust-scores'),get('job-activity?limit=100'),get('jobs?limit=100'),get('reviews'),get('disputes'),get('live/rejections')]);
+async function load(){try{const [events,workers,activities,jobs,reviews,disputes,rejections,comparison,devices]=await Promise.all([get('live/events'),get('trust-scores'),get('job-activity?limit=100'),get('jobs?limit=100'),get('reviews'),get('disputes'),get('live/rejections'),get('comparison').catch(()=>null),get('devices').catch(()=>[])]);
   const eventMap=new Map(events.map(row=>[row.id,row]));for(const rejected of rejections){if(!eventMap.has(rejected.event_id)){eventMap.set(rejected.event_id,{...(rejected.event_payload||{}),id:rejected.event_id,worker_id:rejected.worker_id,verified:false,rejection_reason:rejected.reason})}}
   const orderedEvents=[...eventMap.values()].filter(row=>!row.payload?.synthetic&&!String(row.device_id||'').startsWith('SEED-')).sort((a,b)=>String(b.synced_at||b.device_ts||'').localeCompare(String(a.synced_at||a.device_ts||'')));setFeed($('#events'),orderedEvents.slice(0,50).map(eventHtml).join(''),'No real badge events have arrived yet. Synthetic history is excluded.');
   cachedWorkers=workers;renderWorkers();
@@ -83,9 +118,17 @@ async function load(){try{const [events,workers,activities,jobs,reviews,disputes
   $('#disputes').innerHTML=realDisputes.slice(0,12).map(row=>`<div class="row"><div class="icon customer">!</div><div><div class="row-title">${safe(row.reason||'Customer dispute')}</div><div class="row-meta">${safe(row.client_id||'Customer')} · Job ${safe(row.job_id)} · ${stamp(row.created_at)}</div></div><span class="pill disputed">${safe(row.status||'OPEN')}</span></div>`).join('')||empty('No customer disputes.');
   const awaiting=jobs.filter(row=>row.status==='awaiting_confirm').length;const confirmations=confirmationRows.filter(row=>row.action==='confirmed').length;
   $('#metric-events').textContent=orderedEvents.filter(row=>row.verified).length;$('#metric-rider').textContent=riderRows.length;$('#metric-awaiting').textContent=awaiting;$('#metric-customer').textContent=confirmations;$('#metric-disputes').textContent=realDisputes.length;
+  if(comparison){
+    const sum=comparison.live_summary||{};
+    const realDevices=(devices||[]).filter(d=>!String(d.id||'').startsWith('SEED-'));
+    const devChips=realDevices.map(d=>`<span class="chip">Badge <strong>${safe(d.id)}</strong> → ${safe(d.worker_id)} (${safe(d.algorithm||'ed25519')}${d.has_chain?' · chain active':''})</span>`).join('');
+    $('#device-chips').innerHTML=`<span class="chip">Registered badges: <strong>${Number(sum.devices_registered||devices.length||0)}</strong></span><span class="chip">Verified events: <strong>${Number(sum.verified_events||0)}</strong></span><span class="chip">Tampered/rejected: <strong>${Number(sum.rejected_events||0)}</strong></span>${devChips}`;
+    $('#comparison-rows').innerHTML=(comparison.dimensions||[]).map(d=>`<tr><td class="comp-dim">${safe(d.dimension)}</td><td class="comp-sb">${safe(d.supabase_plain)}</td><td class="comp-tt">${safe(d.trusttier)}</td></tr>`).join('');
+    $('#comparison-deltas').innerHTML=(comparison.worker_deltas||[]).map(w=>{const flat=(Number(w.supabase_flat_score)*100).toFixed(1);const tt=(Number(w.trusttier_score)*100).toFixed(1);const diff=(Number(w.delta)*100).toFixed(1);const cls=Number(w.delta)>=0?'delta-pos':'delta-neg';return `<tr><td><strong>${safe(w.worker_id)}</strong></td><td>${flat}%</td><td>${tt}%</td><td class="${cls}">${Number(w.delta)>=0?'+':''}${diff}%</td><td>${Number(w.signed_events)} signed · ${Number(w.nfc_events)} NFC</td></tr>`}).join('')||`<tr><td colspan="5" class="empty">No worker scores yet.</td></tr>`;
+  }
   $('#connection').textContent='API connected · polling';$('#connection').classList.add('online');
 }catch(error){$('#connection').textContent='API connection error';$('#connection').classList.remove('online');$('#connection').title=error.message;}}
-async function init(){setInterval(()=>{$('#clock').textContent=new Date().toLocaleString()},1000);$('#worker-search').addEventListener('input',renderWorkers);await load();const cfg=await get('config/public').catch(()=>({}));if(window.supabase&&cfg.supabase_url&&cfg.supabase_anon_key){const sb=window.supabase.createClient(cfg.supabase_url,cfg.supabase_anon_key);try{await sb.auth.signInAnonymously()}catch(_){}realtime=sb.channel('trusttier-operations').on('postgres_changes',{event:'*',schema:'public',table:'events'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'trust_scores'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'job_activity'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'jobs'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'reviews'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'disputes'},refresh).subscribe(status=>{if(status==='SUBSCRIBED'){$('#connection').textContent='Supabase Realtime + API polling';$('#connection').classList.add('online')}})}setInterval(load,4000)}function refresh(){updateCount++;load()}init();
+async function init(){setInterval(()=>{$('#clock').textContent=new Date().toLocaleString()},1000);$('#worker-search').addEventListener('input',renderWorkers);await load();const cfg=await get('config/public').catch(()=>({}));if(window.supabase&&cfg.supabase_url&&cfg.supabase_anon_key){const sb=window.supabase.createClient(cfg.supabase_url,cfg.supabase_anon_key);try{await sb.auth.signInAnonymously()}catch(_){}realtime=sb.channel('trusttier-operations').on('postgres_changes',{event:'*',schema:'public',table:'events'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'trust_scores'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'job_activity'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'jobs'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'reviews'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'disputes'},refresh).subscribe(status=>{if(status==='SUBSCRIBED'){$('#connection').textContent='Supabase Realtime + API polling';$('#connection').classList.add('online')}})}setInterval(load,10000)}function refresh(){updateCount++;load()}init();
 </script>
 </body>
 </html>

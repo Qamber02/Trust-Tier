@@ -49,10 +49,12 @@ String canonical(String id, String type, String tier, String ts, String prev) {
 bool appendEvent(String type, String tier) {
   String id=String((uint32_t)esp_random(), HEX)+String((uint32_t)esp_random(), HEX);
   String ts=timestampUtc(); String body=canonical(id,type,tier,ts,tailHash);
-  uint8_t digest[32]; mbedtls_sha256((const uint8_t*)body.c_str(),body.length(),digest,0);
+  String preimage=tailHash+body;
+  uint8_t digest[32]; mbedtls_sha256((const uint8_t*)preimage.c_str(),preimage.length(),digest,0);
   String hash=hex(digest,sizeof(digest));
   uint8_t privateKey[32]; for(int i=0;i<32;i++) privateKey[i]=strtoul(String(DEVICE_PRIVATE_KEY_HEX).substring(i*2,i*2+2).c_str(),nullptr,16);
-  uint8_t sig[64]; Ed25519::sign(sig,(const uint8_t*)hash.c_str(),hash.length(),privateKey);
+  uint8_t publicKey[32]; Ed25519::derivePublicKey(publicKey, privateKey);
+  uint8_t sig[64]; Ed25519::sign(sig, privateKey, publicKey, hash.c_str(), hash.length());
   JsonDocument doc; deserializeJson(doc,body); doc["hash"]=hash; doc["signature"]=b64(sig,sizeof(sig));
   String line; serializeJson(doc,line); File file=LittleFS.open(LOG_PATH,"a"); if(!file)return false;
   file.println(line); file.close(); tailHash=hash;

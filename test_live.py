@@ -64,3 +64,21 @@ def test_rider_workflow_and_customer_confirmation_are_separate(monkeypatch):
         "customer", "rider", "rider", "rider", "rider", "customer"]
     assert [row["action"] for row in live._job_activity[-2:]] == [
         "finished", "confirmed"]
+
+
+def test_devices_and_comparison_endpoints(monkeypatch):
+    key = _setup(monkeypatch, "ESP32-TEST-01")
+    event = make_event(key, "ESP32-TEST-01", "RDR-TEST", None, "finish", "signed", "")
+    live.sync_events(live.SyncBatch(events=[event]))
+
+    devices = live.list_devices()
+    assert len(devices) == 1
+    assert devices[0]["id"] == "ESP32-TEST-01"
+    assert devices[0]["has_chain"] is True
+    assert "public_key" not in devices[0]
+
+    comp = live.system_comparison()
+    assert len(comp["dimensions"]) == 5
+    assert comp["live_summary"]["devices_registered"] == 1
+    assert comp["live_summary"]["verified_events"] == 1
+    assert comp["worker_deltas"][0]["worker_id"] == "RDR-TEST"
